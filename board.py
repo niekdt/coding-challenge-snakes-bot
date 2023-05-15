@@ -1,4 +1,6 @@
 import unittest as ut
+from itertools import compress
+
 import numpy as np
 
 from typing import Self
@@ -9,8 +11,10 @@ MOVE_UP = np.array([0, -1])  # note: the reverse of constants.py
 MOVE_DOWN = np.array([0, 1])
 MOVE_LEFT = np.array([-1, 0])
 MOVE_RIGHT = np.array([1, 0])
-ALL_MOVES = np.vstack((MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN))
+ALL_MOVES = [MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN]
 
+
+# TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
 
 class Board:
     def __init__(self, width: int, height: int):
@@ -98,11 +102,7 @@ class Board:
         self.grid = board.grid
         pass
 
-    def copy(self) -> Self:
-        board = Board(self.width, self.height)
-        return board.inherit(self)
-
-    def get_valid_moves(self, player: int) -> ndarray:
+    def get_valid_moves(self, player: int) -> list:
         if player == 1:
             pos = self.player1_pos
         else:
@@ -113,7 +113,7 @@ class Board:
         can_move_up = pos[1] > 0 and self.is_empty_pos(pos + MOVE_UP)
         can_move_down = pos[1] < self.height - 1 and self.is_empty_pos(pos + MOVE_DOWN)
 
-        return ALL_MOVES[np.array([can_move_left, can_move_right, can_move_up, can_move_down])]
+        return list(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: ndarray, player: int):
@@ -275,6 +275,33 @@ class TestBoard(ut.TestCase):
             '+---+\n| aA|\n| Bb|\n+---+'
         )
 
+    def test_move_generation(self):
+        b = Board(3, 2)
+        b.spawn(pos1=(1, 0), pos2=(2, 1))
+        moves1 = list(map(tuple, b.get_valid_moves(1)))
+        self.assertEqual(len(moves1), 3)
+        self.assertTrue(tuple(MOVE_LEFT) in moves1)
+        self.assertTrue(tuple(MOVE_RIGHT) in moves1)
+        self.assertTrue(tuple(MOVE_DOWN) in moves1)
+
+        moves2 = list(map(tuple, b.get_valid_moves(2)))
+        self.assertEqual(len(moves2), 2)
+        self.assertTrue(tuple(MOVE_LEFT) in moves2)
+        self.assertTrue(tuple(MOVE_UP) in moves2)
+
+        # perform a move and recheck the options
+        b.perform_move(MOVE_LEFT, 1)
+        moves12 = list(map(tuple, b.get_valid_moves(1)))
+        self.assertEqual(len(moves12), 2)
+        self.assertTrue(tuple(MOVE_RIGHT) in moves12)
+        self.assertTrue(tuple(MOVE_DOWN) in moves12)
+
+        b.perform_move(MOVE_LEFT, 2)
+        moves22 = list(map(tuple, b.get_valid_moves(2)))
+        self.assertEqual(len(moves22), 3)
+        self.assertTrue(tuple(MOVE_LEFT) in moves22)
+        self.assertTrue(tuple(MOVE_RIGHT) in moves22)
+        self.assertTrue(tuple(MOVE_UP) in moves22)
 
 if __name__ == '__main__':
     ut.main()

@@ -1,11 +1,11 @@
 import unittest as ut
 from itertools import compress
-
-import numpy as np
-
 from typing import Self
 
+import numpy as np
 from numpy import ndarray
+
+from game import Snake
 
 MOVE_UP = np.array([0, -1])  # note: the reverse of constants.py
 MOVE_DOWN = np.array([0, 1])
@@ -46,9 +46,44 @@ class Board:
         self.grid[pos2] = -self.player2_turn
         pass
 
+    # turn 1: P1 is about to move (P1=1, P2=1)
+    # turn 2: P2 is about to move, P1 has moved (P1=2, P2=1)
+    # turn 3: P1 is about to move, P2 has moved (P1=2, P2=2)
+    # turn 4: P2 is about to move, P1 has moved (P1=3, P2=2)
+    # etc.
+    def set_state(self, snakes, candies, turn):
+        assert len(snakes) == 2
+        assert turn >= 1
+
+        # clear grid
+        self.grid.fill(0)
+
+        self.player1_turn = turn // 2 + 1
+        self.player2_turn = (turn + 1) // 2
+
+        snake1 = snakes[0]
+        snake2 = snakes[1]
+
+        assert self.player1_turn >= len(snake1.positions)
+        assert self.player2_turn >= len(snake2.positions)
+
+        # snake positions are in reverse order (head is last element)
+        for i, pos in enumerate(snake1.positions):
+            self.grid[pos[0], pos[1]] = self.player1_turn - len(snake1.positions) + i + 1
+
+        for i, pos in enumerate(snake2.positions):
+            self.grid[pos[0], pos[1]] = -self.player2_turn + len(snake2.positions) - i - 1
+
+        self.candies = candies.copy()
+        pass
+
     @property
     def shape(self) -> tuple:
         return self.width, self.height
+
+    @property
+    def turn(self) -> int:
+        return self.player1_turn + self.player2_turn - 1
 
     @property
     def size(self) -> int:
@@ -302,6 +337,35 @@ class TestBoard(ut.TestCase):
         self.assertTrue(tuple(MOVE_LEFT) in moves22)
         self.assertTrue(tuple(MOVE_RIGHT) in moves22)
         self.assertTrue(tuple(MOVE_UP) in moves22)
+
+    def test_set_state(self):
+        b = Board(2, 2)
+        snakes = [Snake(id=0, positions=np.array([[0, 0]])), Snake(id=1, positions=np.array([[1, 1]]))]
+        b.set_state(snakes=snakes, candies=[], turn=1)
+        self.assertEqual(b.turn, 1)
+        self.assertEqual(b.player1_turn, 1)
+        self.assertEqual(b.player2_turn, 1)
+        self.assertTrue(np.array_equal(b.grid, np.array([[1, 0], [0, -1]])))
+        self.assertEqual(len(b.candies), 0)
+
+        b2 = Board(2, 2)
+        snakes2 = [Snake(id=0, positions=np.array([[0, 0], [0, 1]])), Snake(id=1, positions=np.array([[1, 1]]))]
+        b2.set_state(snakes=snakes2, candies=[], turn=2)
+        self.assertEqual(b2.turn, 2)
+        self.assertEqual(b2.player1_turn, 2)
+        self.assertEqual(b2.player2_turn, 1)
+        self.assertTrue(np.array_equal(b2.grid, np.array([[1, 2], [0, -1]])))
+        self.assertEqual(len(b2.candies), 0)
+
+        b3 = Board(2, 2)
+        snakes3 = [Snake(id=0, positions=np.array([[0, 0], [0, 1]])), Snake(id=1, positions=np.array([[1, 1], [1, 0]]))]
+        b3.set_state(snakes=snakes3, candies=[], turn=3)
+        self.assertEqual(b3.turn, 3)
+        self.assertEqual(b3.player1_turn, 2)
+        self.assertEqual(b3.player2_turn, 2)
+        self.assertTrue(np.array_equal(b3.grid, np.array([[1, 2], [-2, -1]])))
+        self.assertEqual(len(b3.candies), 0)
+
 
 if __name__ == '__main__':
     ut.main()

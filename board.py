@@ -5,9 +5,10 @@ from typing import Self
 import numpy as np
 from numpy import ndarray
 
+from constants import Move
 from game import Snake
 
-MOVE_UP = np.array([0, -1])  # note: the reverse of constants.py
+MOVE_UP = np.array([0, -1])  # note: vertical axis in opposite direction of constants.py
 MOVE_DOWN = np.array([0, 1])
 MOVE_LEFT = np.array([-1, 0])
 MOVE_RIGHT = np.array([1, 0])
@@ -15,6 +16,21 @@ ALL_MOVES = [MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN]
 
 
 # TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
+
+def as_move(move) -> Move:
+    assert type(move) == np.ndarray
+
+    if move[0] == 0:
+        if move[1] == 1:
+            return Move.DOWN
+        else:
+            return Move.UP
+    else:
+        if move[0] == 1:
+            return Move.RIGHT
+        else:
+            return Move.LEFT
+
 
 class Board:
     def __init__(self, width: int, height: int):
@@ -51,18 +67,19 @@ class Board:
     # turn 3: P1 is about to move, P2 has moved (P1=2, P2=2)
     # turn 4: P2 is about to move, P1 has moved (P1=3, P2=2)
     # etc.
-    def set_state(self, snakes, candies, turn):
+    def set_state(self, snakes, candies, turn: int):
         assert len(snakes) == 2
+        assert type(turn) == int
         assert turn >= 1
+
+        snake1 = snakes[0]
+        snake2 = snakes[1]
 
         # clear grid
         self.grid.fill(0)
 
         self.player1_turn = turn // 2 + 1
         self.player2_turn = (turn + 1) // 2
-
-        snake1 = snakes[0]
-        snake2 = snakes[1]
 
         assert self.player1_turn >= len(snake1.positions)
         assert self.player2_turn >= len(snake2.positions)
@@ -365,6 +382,12 @@ class TestBoard(ut.TestCase):
         self.assertEqual(b3.player2_turn, 2)
         self.assertTrue(np.array_equal(b3.grid, np.array([[1, 2], [-2, -1]])))
         self.assertEqual(len(b3.candies), 0)
+
+    def test_move_conversion(self):
+        self.assertEqual(Move.LEFT, as_move(MOVE_LEFT))
+        self.assertEqual(Move.RIGHT, as_move(MOVE_RIGHT))
+        self.assertEqual(Move.UP, as_move(MOVE_UP))
+        self.assertEqual(Move.DOWN, as_move(MOVE_DOWN))
 
 
 if __name__ == '__main__':

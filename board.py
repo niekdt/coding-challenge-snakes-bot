@@ -5,8 +5,8 @@ from typing import Self
 import numpy as np
 from numpy import ndarray
 
-from constants import Move
-from game import Snake
+from snakes.constants import Move
+from snakes.snake import Snake
 
 MOVE_UP = np.array([0, -1])  # note: vertical axis in opposite direction of constants.py
 MOVE_DOWN = np.array([0, 1])

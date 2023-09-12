@@ -1,7 +1,7 @@
 from copy import deepcopy
 from math import inf
 
-from board import Board
+from ..board import Board
 
 
 def minimax(board: Board, depth: int, maximize: bool, eval_fun) -> float:

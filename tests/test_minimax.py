@@ -1,6 +1,6 @@
 import numpy as np
 
-from minimax_bot import Minimax
+from ..bots.minimax_bot import Minimax
 from snakes.constants import Move
 from snakes.snake import Snake
 

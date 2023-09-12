@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from board import Board, MOVE_LEFT, MOVE_UP, MOVE_RIGHT, MOVE_DOWN, as_move
+from ..board import Board, MOVE_LEFT, MOVE_UP, MOVE_RIGHT, MOVE_DOWN, as_move
 from snakes.constants import Move
 from snakes.snake import Snake
 

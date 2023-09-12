@@ -1,9 +1,9 @@
 from abc import ABC
 from copy import deepcopy
 
-from board import Board, as_move
-from death_eval import evaluate
-from minimax_search import minimax
+from ..board import Board, as_move
+from ..eval.death_eval import evaluate
+from ..search.minimax_search import minimax
 from snakes.bot import Bot
 from snakes.constants import Move
 

@@ -4,7 +4,11 @@ from typing import Self
 import numpy as np
 from numpy import ndarray
 
-from snakes.constants import Move
+from ...constants import Move
+from ...snake import Snake
+
+PLAYER_ME = 1
+PLAYER_OTHER = 2
 
 MOVE_UP = np.array([0, -1])  # note: vertical axis in opposite direction of constants.py
 MOVE_DOWN = np.array([0, 1])
@@ -35,16 +39,16 @@ class Board:
         assert width > 0
         assert height > 0
 
-        self.width = width
-        self.height = height
+        self.width: int = width
+        self.height: int = height
         self.candies = []
-        self.grid = np.zeros([width, height])
-        self.player1_turn = 1
-        self.player2_turn = 1
-        self.player1_pos = ()
-        self.player2_pos = ()
-        self.player1_length = 1
-        self.player2_length = 1
+        self.grid: ndarray[int] = np.zeros([width, height])
+        self.player1_turn: int = 1
+        self.player2_turn: int = 1
+        self.player1_pos: ndarray = np.array((), dtype=int)
+        self.player2_pos: ndarray = np.array((), dtype=int)
+        self.player1_length: int = 1
+        self.player2_length: int = 1
 
     def spawn(self, pos1: tuple, pos2: tuple):
         assert type(pos1) is tuple
@@ -53,9 +57,8 @@ class Board:
         assert self.is_valid_pos(pos1), 'invalid spawn pos for P1'
         assert self.is_valid_pos(pos2), 'invalid spawn pos for P2'
 
-        # TODO decide on whether pos should be tuple or ndarray. Currently it is converted to ndarray by perform_move()
-        self.player1_pos = pos1
-        self.player2_pos = pos2
+        self.player1_pos = np.array(pos1, dtype=int)
+        self.player2_pos = np.array(pos2, dtype=int)
         self.grid[pos1] = self.player1_turn
         self.grid[pos2] = -self.player2_turn
         pass
@@ -65,13 +68,9 @@ class Board:
     # turn 3: P1 is about to move, P2 has moved (P1=2, P2=2)
     # turn 4: P2 is about to move, P1 has moved (P1=3, P2=2)
     # etc.
-    def set_state(self, snakes, candies, turn: int):
-        assert len(snakes) == 2
+    def set_state(self, snake: Snake, other_snake: Snake, candies, turn: int = 1):
         assert type(turn) == int
         assert turn >= 1
-
-        snake1 = snakes[0]
-        snake2 = snakes[1]
 
         # clear grid
         self.grid.fill(0)
@@ -79,15 +78,18 @@ class Board:
         self.player1_turn = turn // 2 + 1
         self.player2_turn = (turn + 1) // 2
 
-        assert self.player1_turn >= len(snake1.positions)
-        assert self.player2_turn >= len(snake2.positions)
+        assert self.player1_turn >= len(snake.positions)
+        assert self.player2_turn >= len(other_snake.positions)
 
         # snake positions are in reverse order (head is last element)
-        for i, pos in enumerate(snake1.positions):
-            self.grid[pos[0], pos[1]] = self.player1_turn - len(snake1.positions) + i + 1
+        for i, pos in enumerate(snake.positions):
+            self.grid[pos[0], pos[1]] = self.player1_turn - len(snake.positions) + i + 1
 
-        for i, pos in enumerate(snake2.positions):
-            self.grid[pos[0], pos[1]] = -self.player2_turn + len(snake2.positions) - i - 1
+        for i, pos in enumerate(other_snake.positions):
+            self.grid[pos[0], pos[1]] = -self.player2_turn + len(other_snake.positions) - i - 1
+
+        self.player1_pos = snake.positions[-1]
+        self.player2_pos = snake.positions[-1]
 
         self.candies = candies.copy()
         pass
@@ -107,14 +109,14 @@ class Board:
     def get_free_space(self) -> int:
         return np.sum(self.get_empty_mask() == True, axis=None)  # how to get rid of the warning??
 
-    def is_valid_pos(self, pos: tuple) -> bool:
+    def is_valid_pos(self, pos: ndarray) -> bool:
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
 
-    def is_candy_pos(self, pos: tuple) -> bool:
+    def is_candy_pos(self, pos: ndarray) -> bool:
         return pos in self.candies
 
     # TODO optimize
-    def is_empty_pos(self, pos: tuple) -> bool:
+    def is_empty_pos(self, pos: ndarray) -> bool:
         return self.get_empty_mask()[pos[0], pos[1]] == True
 
     # TODO optimize
@@ -158,6 +160,8 @@ class Board:
         else:
             pos = self.player2_pos
 
+        assert self.is_valid_pos(pos), 'invalid position tuple for player {player}: {pos}'
+
         can_move_left = pos[0] > 0 and self.is_empty_pos(pos + MOVE_LEFT)
         can_move_right = pos[0] < self.width - 1 and self.is_empty_pos(pos + MOVE_RIGHT)
         can_move_up = pos[1] > 0 and self.is_empty_pos(pos + MOVE_UP)
@@ -196,11 +200,11 @@ class Board:
             self.grid[tuple(self.player2_pos)] = -self.player2_turn
         pass
 
-    def spawn_candy(self, pos: tuple):
+    def spawn_candy(self, pos: ndarray):
         assert not (pos in self.candies)
         self.candies.append(pos)
 
-    def remove_candy(self, pos: tuple):
+    def remove_candy(self, pos: ndarray):
         self.candies.remove(pos)
 
     def __eq__(self, other) -> bool:
@@ -225,7 +229,7 @@ class Board:
         # how to join array elems into single string??
         # for now, use array2string and clean up the garbage output by np
         # how to replace multiple chars?
-        return np.array2string(str_field.T, separator=''). \
+        return '\n' + np.array2string(str_field.T, separator=''). \
             replace('[', ''). \
             replace(']', ''). \
             replace("'", ''). \

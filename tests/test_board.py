@@ -1,3 +1,5 @@
+import itertools
+
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
@@ -13,11 +15,32 @@ def test_init():
     assert b.size == 8 * 6
 
     assert np.all(b.get_empty_mask() == True)
-    assert b.get_free_space() == 8 * 6
     assert np.all(b.get_player1_mask() == False)
     assert np.all(b.get_player2_mask() == False)
-    assert b.is_empty_pos((0, 0))
     assert not b.has_candy()
+
+
+def test_is_valid_pos():
+    b = Board(3, 2)
+    for x, y in itertools.product(range(b.width), range(b.height)):
+        assert b.is_valid_pos(np.array((x, y)))
+
+    assert not b.is_valid_pos(np.array((-1, 0)))
+    assert not b.is_valid_pos(np.array((0, -1)))
+    assert not b.is_valid_pos(np.array((b.width, 0)))
+    assert not b.is_valid_pos(np.array((0, b.height)))
+
+
+def test_is_empty_pos():
+    b = Board(3, 2)
+    for x, y in itertools.product(range(b.width), range(b.height)):
+        assert b.is_empty_pos(np.array((x, y)))
+
+
+def test_is_candy_pos():
+    b = Board(3, 2)
+    for x, y in itertools.product(range(b.width), range(b.height)):
+        assert not b.is_candy_pos(np.array((x, y)))
 
 
 def test_spawn():
@@ -30,11 +53,18 @@ def test_spawn():
     assert np.sum(b.get_player2_mask()) == 1
     assert not b.is_empty_pos(b.player1_pos)
     assert not b.is_empty_pos(b.player2_pos)
-    assert b.get_free_space() == 8 * 8 - 2
 
     # candies
     assert np.all(b.get_candy_mask() == False)
     assert not b.has_candy()
+
+
+def test_free_space():
+    b = Board(8, 6)
+    assert b.get_free_space() == 8 * 6
+
+    b.spawn(pos1=(1, 2), pos2=(2, 3))
+    assert b.get_free_space() == 8 * 6 - 2
 
 
 def test_move():

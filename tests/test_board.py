@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from ..board import Board, MOVE_LEFT, MOVE_UP, MOVE_RIGHT, MOVE_DOWN, as_move
-from ....constants import Move
+from ..board import Board
+from ....constants import Move, LEFT, DOWN, RIGHT, UP
 from ....snake import Snake
 
 
@@ -73,41 +73,41 @@ def test_move():
 
     # move P1
     with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_LEFT, player=1)  # cannot move left
+        b.perform_move(move=LEFT, player=1)  # cannot move left
     with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_UP, player=1)  # cannot move up
+        b.perform_move(move=DOWN, player=1)  # cannot move down
 
-    b.perform_move(move=MOVE_RIGHT, player=1)
+    b.perform_move(move=RIGHT, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 0)))
 
     # move P2
     with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_RIGHT, player=2)  # cannot move right
+        b.perform_move(move=RIGHT, player=2)  # cannot move right
     with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_DOWN, player=2)  # cannot move down
-    b.perform_move(move=MOVE_LEFT, player=2)
+        b.perform_move(move=UP, player=2)  # cannot move up
+    b.perform_move(move=LEFT, player=2)
     assert_array_equal(b.player2_pos, np.array((1, 2)))
 
     # move P1 to center
-    b.perform_move(move=MOVE_DOWN, player=1)
+    b.perform_move(move=UP, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 1)))
 
     # attempt to move P2 to center (suicide)
     with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_UP, player=2)
+        b.perform_move(move=DOWN, player=2)
 
 
 def test_print():
     b = Board(3, 2)
     assert str(b) == '\n+---+\n|   |\n|   |\n+---+'
     b.spawn(pos1=(1, 0), pos2=(2, 1))
-    assert str(b) == '\n+---+\n| A |\n|  B|\n+---+'
+    assert str(b) == '\n+---+\n|  B|\n| A |\n+---+'
 
     b.player1_length = 2
     b.player2_length = 2
-    b.perform_move(MOVE_RIGHT, player=1)
-    b.perform_move(MOVE_LEFT, player=2)
-    assert str(b) == '\n+---+\n| aA|\n| Bb|\n+---+'
+    b.perform_move(RIGHT, player=1)
+    b.perform_move(LEFT, player=2)
+    assert str(b) == '\n+---+\n| Bb|\n| aA|\n+---+'
 
 
 def test_move_generation():
@@ -115,28 +115,28 @@ def test_move_generation():
     b.spawn(pos1=(1, 0), pos2=(2, 1))
     moves1 = list(map(tuple, b.get_valid_moves(1)))
     assert len(moves1) == 3
-    assert tuple(MOVE_LEFT) in moves1
-    assert tuple(MOVE_RIGHT) in moves1
-    assert tuple(MOVE_DOWN) in moves1
+    assert tuple(LEFT) in moves1
+    assert tuple(RIGHT) in moves1
+    assert tuple(UP) in moves1
 
     moves2 = list(map(tuple, b.get_valid_moves(2)))
     assert len(moves2) == 2
-    assert tuple(MOVE_LEFT) in moves2
-    assert tuple(MOVE_UP) in moves2
+    assert tuple(LEFT) in moves2
+    assert tuple(DOWN) in moves2
 
     # perform a move and recheck the options
-    b.perform_move(MOVE_LEFT, 1)
+    b.perform_move(LEFT, 1)
     moves12 = list(map(tuple, b.get_valid_moves(1)))
     assert len(moves12) == 2
-    assert tuple(MOVE_RIGHT) in moves12
-    assert tuple(MOVE_DOWN) in moves12
+    assert tuple(RIGHT) in moves12
+    assert tuple(UP) in moves12
 
-    b.perform_move(MOVE_LEFT, 2)
+    b.perform_move(LEFT, 2)
     moves22 = list(map(tuple, b.get_valid_moves(2)))
     assert len(moves22) == 3
-    assert tuple(MOVE_LEFT) in moves22
-    assert tuple(MOVE_RIGHT) in moves22
-    assert tuple(MOVE_UP) in moves22
+    assert tuple(LEFT) in moves22
+    assert tuple(RIGHT) in moves22
+    assert tuple(DOWN) in moves22
 
 
 def test_set_state():
@@ -182,9 +182,3 @@ def test_set_state():
     )
     assert len(b3.candies) == 0
 
-
-def test_move_conversion():
-    assert Move.LEFT == as_move(MOVE_LEFT)
-    assert Move.RIGHT == as_move(MOVE_RIGHT)
-    assert Move.UP == as_move(MOVE_UP)
-    assert Move.DOWN == as_move(MOVE_DOWN)

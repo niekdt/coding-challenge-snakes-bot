@@ -5,35 +5,16 @@ from typing import Self, List
 import numpy as np
 from numpy import ndarray
 
-from ...constants import Move
+from ...constants import Move, LEFT, RIGHT, UP, DOWN
 from ...snake import Snake
 
 PLAYER_ME = 1
 PLAYER_OTHER = 2
 
-MOVE_UP = np.array([0, -1])  # note: vertical axis in opposite direction of constants.py
-MOVE_DOWN = np.array([0, 1])
-MOVE_LEFT = np.array([-1, 0])
-MOVE_RIGHT = np.array([1, 0])
-ALL_MOVES = [MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN]
+ALL_MOVES = [LEFT, RIGHT, UP, DOWN]
 
 
 # TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
-
-def as_move(move) -> Move:
-    assert type(move) == np.ndarray
-
-    if move[0] == 0:
-        if move[1] == 1:
-            return Move.DOWN
-        else:
-            return Move.UP
-    else:
-        if move[0] == 1:
-            return Move.RIGHT
-        else:
-            return Move.LEFT
-
 
 class Board:
     _target_pos = np.array((0, 0), dtype=int)
@@ -163,10 +144,10 @@ class Board:
 
         assert self.is_valid_pos(pos), 'invalid position tuple for player {player}: {pos}'
 
-        can_move_left = pos[0] > 0 and self.is_empty_pos(pos + MOVE_LEFT)
-        can_move_right = pos[0] < self.width - 1 and self.is_empty_pos(pos + MOVE_RIGHT)
-        can_move_up = pos[1] > 0 and self.is_empty_pos(pos + MOVE_UP)
-        can_move_down = pos[1] < self.height - 1 and self.is_empty_pos(pos + MOVE_DOWN)
+        can_move_left = pos[0] > 0 and self.is_empty_pos(pos + LEFT)
+        can_move_right = pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)
+        can_move_up = pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)
+        can_move_down = pos[1] > 0 and self.is_empty_pos(pos + DOWN)
 
         return list(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
 
@@ -237,7 +218,7 @@ class Board:
         # how to join array elems into single string??
         # for now, use array2string and clean up the garbage output by np
         # how to replace multiple chars?
-        return '\n' + np.array2string(str_field.T, separator=''). \
+        return '\n' + np.array2string(np.flipud(str_field.T), separator=''). \
             replace('[', ''). \
             replace(']', ''). \
             replace("'", ''). \

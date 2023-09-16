@@ -5,13 +5,10 @@ from typing import Self, List
 import numpy as np
 from numpy import ndarray
 
-from ...constants import Move, LEFT, RIGHT, UP, DOWN
+from ...constants import LEFT, RIGHT, UP, DOWN, Move
 from ...snake import Snake
 
-PLAYER_ME = 1
-PLAYER_OTHER = 2
-
-ALL_MOVES = [LEFT, RIGHT, UP, DOWN]
+ALL_MOVES = (LEFT, RIGHT, UP, DOWN)
 
 
 # TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
@@ -229,3 +226,16 @@ class Board:
         # TODO add turn info
         str_board = str(self)
         return str_board
+
+
+def as_move(move: ndarray) -> Move:
+    """Convert ndarray move to Move enum item"""
+    if move[0] == 0:
+        if move[1] == 1:
+            return Move.UP
+        else:
+            return Move.DOWN
+    elif move[0] == 1:
+        return Move.RIGHT
+    else:
+        return Move.LEFT

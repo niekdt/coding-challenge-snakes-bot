@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from ..board import Board
+from ..board import Board, as_move
 from ....constants import Move, LEFT, DOWN, RIGHT, UP
 from ....snake import Snake
 
@@ -182,3 +182,9 @@ def test_set_state():
     )
     assert len(b3.candies) == 0
 
+
+def test_as_move():
+    assert as_move(LEFT) == Move.LEFT
+    assert as_move(RIGHT) == Move.RIGHT
+    assert as_move(UP) == Move.UP
+    assert as_move(DOWN) == Move.DOWN

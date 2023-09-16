@@ -19,7 +19,7 @@ ALL_MOVES = [LEFT, RIGHT, UP, DOWN]
 class Board:
     _target_pos = np.array((0, 0), dtype=int)
 
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
         assert width > 0
         assert height > 0
@@ -35,7 +35,7 @@ class Board:
         self.player1_length: int = 0
         self.player2_length: int = 0
 
-    def spawn(self, pos1: tuple, pos2: tuple):
+    def spawn(self, pos1: tuple, pos2: tuple) -> None:
         """Spawn snakes of length 1 at the given positions"""
         assert isinstance(pos1, tuple)
         assert isinstance(pos2, tuple)
@@ -54,7 +54,7 @@ class Board:
         self.grid[pos2] = self.player2_head
         pass
 
-    def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]):
+    def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
         assert isinstance(snake1, Snake)
         assert isinstance(snake2, Snake)
         assert isinstance(candies, list)
@@ -124,7 +124,7 @@ class Board:
     def has_candy(self) -> bool:
         return len(self.candies) > 0
 
-    def inherit(self, board: Self):
+    def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
         np.copyto(self.player1_pos, board.player1_pos, casting='no')
         np.copyto(self.player2_pos, board.player2_pos, casting='no')
@@ -136,7 +136,7 @@ class Board:
         self.candies = deepcopy(board.candies)
         pass
 
-    def get_valid_moves(self, player: int) -> list:
+    def get_valid_moves(self, player: int) -> List[ndarray]:
         if player == 1:
             pos = self.player1_pos
         else:
@@ -152,7 +152,7 @@ class Board:
         return list(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
 
     # performing a move increments the turn counter and places a new wall
-    def perform_move(self, move: ndarray, player: int):
+    def perform_move(self, move: ndarray, player: int) -> None:
         assert move[0] in (-1, 0, 1) and \
                move[1] in (-1, 0, 1) and \
                move[0] == 0 or move[1] == 0, 'invalid move vector'
@@ -186,11 +186,11 @@ class Board:
             self.grid[tuple(self.player2_pos)] = self.player2_head
         pass
 
-    def spawn_candy(self, pos: ndarray):
+    def spawn_candy(self, pos: ndarray) -> None:
         assert not (pos in self.candies)
         self.candies.append(pos)
 
-    def remove_candy(self, pos: ndarray):
+    def remove_candy(self, pos: ndarray) -> None:
         self.candies.remove(pos)
 
     def __len__(self) -> int:
@@ -201,7 +201,7 @@ class Board:
             self.player2_head == other.player2_head and \
             np.array_equal(self.grid, other.grid)
 
-    def __str__(self):
+    def __str__(self) -> str:
         str_grid = np.full(self.shape, fill_value='_', dtype=str)
         str_grid[self.get_player1_mask()] = 'a'
         str_grid[self.get_player2_mask()] = 'b'
@@ -225,7 +225,7 @@ class Board:
             replace(' ', ''). \
             replace('_', ' ')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         # TODO add turn info
         str_board = str(self)
         return str_board

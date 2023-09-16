@@ -12,7 +12,7 @@ from ....snake import Snake
 def test_init():
     b = Board(8, 6)
     assert b.shape == (8, 6)
-    assert b.size == 8 * 6
+    assert len(b) == 8 * 6
 
     assert np.all(b.get_empty_mask() == True)
     assert np.all(b.get_player1_mask() == False)
@@ -80,9 +80,6 @@ def test_move():
     b.perform_move(move=MOVE_RIGHT, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 0)))
 
-    with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_RIGHT, player=1)  # cannot move twice in a row
-
     # move P2
     with pytest.raises(AssertionError):
         b.perform_move(move=MOVE_RIGHT, player=2)  # cannot move right
@@ -90,9 +87,6 @@ def test_move():
         b.perform_move(move=MOVE_DOWN, player=2)  # cannot move down
     b.perform_move(move=MOVE_LEFT, player=2)
     assert_array_equal(b.player2_pos, np.array((1, 2)))
-
-    with pytest.raises(AssertionError):
-        b.perform_move(move=MOVE_LEFT, player=2)  # cannot move twice in a row
 
     # move P1 to center
     b.perform_move(move=MOVE_DOWN, player=1)
@@ -105,15 +99,15 @@ def test_move():
 
 def test_print():
     b = Board(3, 2)
-    assert b.__str__() == '\n+---+\n|   |\n|   |\n+---+'
+    assert str(b) == '\n+---+\n|   |\n|   |\n+---+'
     b.spawn(pos1=(1, 0), pos2=(2, 1))
-    assert b.__str__() == '\n+---+\n| A |\n|  B|\n+---+'
+    assert str(b) == '\n+---+\n| A |\n|  B|\n+---+'
 
     b.player1_length = 2
     b.player2_length = 2
     b.perform_move(MOVE_RIGHT, player=1)
     b.perform_move(MOVE_LEFT, player=2)
-    assert b.__str__() == '\n+---+\n| aA|\n| Bb|\n+---+'
+    assert str(b) == '\n+---+\n| aA|\n| Bb|\n+---+'
 
 
 def test_move_generation():
@@ -148,14 +142,12 @@ def test_move_generation():
 def test_set_state():
     b = Board(2, 2)
     b.set_state(
-        snake=Snake(id=0, positions=np.array([[0, 0]])),
-        other_snake=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[],
-        turn=1
+        snake1=Snake(id=0, positions=np.array([[0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1]])),
+        candies=[]
     )
-    assert b.turn == 1
-    assert b.player1_turn == 1
-    assert b.player2_turn == 1
+    assert b.player1_head == 1
+    assert b.player2_head == -1
     assert_array_equal(
         b.grid,
         np.array([[1, 0], [0, -1]])
@@ -164,14 +156,12 @@ def test_set_state():
 
     b2 = Board(2, 2)
     b2.set_state(
-        snake=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
-        other_snake=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[],
-        turn=2
+        snake1=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1]])),
+        candies=[]
     )
-    assert b2.turn == 2
-    assert b2.player1_turn == 2
-    assert b2.player2_turn == 1
+    assert b2.player1_head == 2
+    assert b2.player2_head == -1
     assert_array_equal(
         b2.grid,
         np.array([[1, 2], [0, -1]])
@@ -180,14 +170,12 @@ def test_set_state():
 
     b3 = Board(2, 2)
     b3.set_state(
-        snake=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
-        other_snake=Snake(id=1, positions=np.array([[1, 1], [1, 0]])),
-        candies=[],
-        turn=3
+        snake1=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1], [1, 0]])),
+        candies=[]
     )
-    assert b3.turn == 3
-    assert b3.player1_turn == 2
-    assert b3.player2_turn == 2
+    assert b3.player1_head == 2
+    assert b3.player2_head == -2
     assert_array_equal(
         b3.grid,
         np.array([[1, 2], [-2, -1]])

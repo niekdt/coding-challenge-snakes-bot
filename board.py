@@ -1,5 +1,6 @@
+from copy import deepcopy
 from itertools import compress
-from typing import Self
+from typing import Self, List
 
 import numpy as np
 from numpy import ndarray
@@ -35,61 +36,68 @@ def as_move(move) -> Move:
 
 
 class Board:
+    _target_pos = np.array((0, 0), dtype=int)
+
     def __init__(self, width: int, height: int):
+        """Define an empty board of a given dimension"""
         assert width > 0
         assert height > 0
 
         self.width: int = width
         self.height: int = height
-        self.candies = []
+        self.candies: List[ndarray] = []
         self.grid: ndarray[int] = np.zeros([width, height])
-        self.player1_turn: int = 1
-        self.player2_turn: int = 1
-        self.player1_pos: ndarray = np.array((), dtype=int)
-        self.player2_pos: ndarray = np.array((), dtype=int)
-        self.player1_length: int = 1
-        self.player2_length: int = 1
+        self.player1_pos: ndarray = np.array((-2, -2), dtype=int)
+        self.player2_pos: ndarray = np.array((-2, -2), dtype=int)
+        self.player1_head: int = 0
+        self.player2_head: int = 0
+        self.player1_length: int = 0
+        self.player2_length: int = 0
 
     def spawn(self, pos1: tuple, pos2: tuple):
-        assert type(pos1) is tuple
-        assert type(pos2) is tuple
-        assert len(self.player1_pos) == 0, 'players have already spawned'
-        assert self.is_valid_pos(pos1), 'invalid spawn pos for P1'
-        assert self.is_valid_pos(pos2), 'invalid spawn pos for P2'
+        """Spawn snakes of length 1 at the given positions"""
+        assert isinstance(pos1, tuple)
+        assert isinstance(pos2, tuple)
+        assert self.player1_head == 0 and self.player2_head == 0, 'players have already spawned'
 
+        self.player1_head = 1
+        self.player2_head = -1
+        self.player1_length = 1
+        self.player2_length = 1
         self.player1_pos = np.array(pos1, dtype=int)
         self.player2_pos = np.array(pos2, dtype=int)
-        self.grid[pos1] = self.player1_turn
-        self.grid[pos2] = -self.player2_turn
+        assert self.is_valid_pos(self.player1_pos), 'invalid spawn pos for P1'
+        assert self.is_valid_pos(self.player2_pos), 'invalid spawn pos for P2'
+
+        self.grid[pos1] = self.player1_head
+        self.grid[pos2] = self.player2_head
         pass
 
-    # turn 1: P1 is about to move (P1=1, P2=1)
-    # turn 2: P2 is about to move, P1 has moved (P1=2, P2=1)
-    # turn 3: P1 is about to move, P2 has moved (P1=2, P2=2)
-    # turn 4: P2 is about to move, P1 has moved (P1=3, P2=2)
-    # etc.
-    def set_state(self, snake: Snake, other_snake: Snake, candies, turn: int = 1):
-        assert type(turn) == int
-        assert turn >= 1
+    def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]):
+        assert isinstance(snake1, Snake)
+        assert isinstance(snake2, Snake)
+        assert isinstance(candies, list)
 
         # clear grid
         self.grid.fill(0)
 
-        self.player1_turn = turn // 2 + 1
-        self.player2_turn = (turn + 1) // 2
+        self.player1_length = len(snake1.positions)
+        self.player2_length = len(snake2.positions)
+        self.player1_head = self.player1_length
+        self.player2_head = -self.player2_length
 
-        assert self.player1_turn >= len(snake.positions)
-        assert self.player2_turn >= len(other_snake.positions)
+        # snake positions are in reverse order (head of the list is tail of the snake)
+        # tail = 1, head = p1_head
+        for i, pos in enumerate(snake1.positions):
+            self.grid[pos[0], pos[1]] = i + 1
 
-        # snake positions are in reverse order (head is last element)
-        for i, pos in enumerate(snake.positions):
-            self.grid[pos[0], pos[1]] = self.player1_turn - len(snake.positions) + i + 1
+        # tail = -1, head = p2_head
+        for i, pos in enumerate(snake2.positions):
+            self.grid[pos[0], pos[1]] = -i - 1
 
-        for i, pos in enumerate(other_snake.positions):
-            self.grid[pos[0], pos[1]] = -self.player2_turn + len(other_snake.positions) - i - 1
-
-        self.player1_pos = snake.positions[-1]
-        self.player2_pos = snake.positions[-1]
+        # set player positions to the head of the snake (the tail of the list)
+        np.copyto(self.player1_pos, snake1.positions[-1], casting='no')
+        np.copyto(self.player2_pos, snake2.positions[-1], casting='no')
 
         self.candies = candies.copy()
         pass
@@ -97,14 +105,6 @@ class Board:
     @property
     def shape(self) -> tuple:
         return self.width, self.height
-
-    @property
-    def turn(self) -> int:
-        return self.player1_turn + self.player2_turn - 1
-
-    @property
-    def size(self) -> int:
-        return self.width * self.height
 
     def get_free_space(self) -> int:
         return np.sum(self.get_empty_mask() == True, axis=None)  # how to get rid of the warning??
@@ -124,10 +124,10 @@ class Board:
         return (self.get_player1_mask() == False) & (self.get_player2_mask() == False)
 
     def get_player1_mask(self) -> ndarray:
-        return self.grid > max(0, self.player1_turn - self.player1_length)
+        return self.grid > max(0, self.player1_head - self.player1_length)
 
     def get_player2_mask(self) -> ndarray:
-        return self.grid < min(0, -self.player2_turn + self.player2_length)
+        return self.grid < min(0, self.player2_head + self.player2_length)
 
     def get_player_mask(self, player: int) -> ndarray:
         if player == 1:
@@ -144,14 +144,15 @@ class Board:
         return len(self.candies) > 0
 
     def inherit(self, board: Self):
-        self.player1_pos = board.player1_pos
-        self.player2_pos = board.player2_pos
+        assert self.shape == board.shape, 'boards must be same size'
+        np.copyto(self.player1_pos, board.player1_pos, casting='no')
+        np.copyto(self.player2_pos, board.player2_pos, casting='no')
+        np.copyto(self.grid, board.grid, casting='no')
         self.player1_length = board.player1_length
         self.player2_length = board.player2_length
-        self.player1_turn = board.player1_turn
-        self.player2_turn = board.player2_turn
-        self.candies = board.candies
-        self.grid = board.grid
+        self.player1_head = board.player1_head
+        self.player2_head = board.player2_head
+        self.candies = deepcopy(board.candies)
         pass
 
     def get_valid_moves(self, player: int) -> list:
@@ -177,27 +178,31 @@ class Board:
 
         # TODO remove branching
         if player == 1:
-            target_pos = self.player1_pos + move
-            assert self.player1_turn == self.player2_turn, 'P1 already moved'
-            assert self.is_valid_pos(target_pos), 'illegal move by P1: invalid position'
-            assert self.is_empty_pos(target_pos), 'illegal move by P1: suicide'
-            self.player1_turn += 1
-            self.player1_pos += move  # update pos
+            np.copyto(self._target_pos, self.player1_pos, casting='no')
+            np.add(self._target_pos, move, out=self._target_pos)  # compute new pos
+            assert self.is_valid_pos(self._target_pos), 'illegal move by P1: invalid position'
+            assert self.is_empty_pos(self._target_pos), 'illegal move by P1: suicide'
+
+            # update game state
+            np.copyto(self.player1_pos, self._target_pos, casting='no')
+            self.player1_head += 1
             if self.is_candy_pos(self.player1_pos):
                 self.player1_length += 1
                 self.remove_candy(self.player1_pos)
-            self.grid[tuple(self.player1_pos)] = self.player1_turn
+            self.grid[tuple(self.player1_pos)] = self.player1_head
         else:
-            target_pos = self.player2_pos + move
-            assert self.player2_turn == self.player1_turn - 1, 'P2 already moved'
-            assert self.is_valid_pos(target_pos), 'illegal move by P2: invalid position'
-            assert self.is_empty_pos(target_pos), 'illegal move by P2: suicide'
-            self.player2_turn += 1
-            self.player2_pos = target_pos
+            np.copyto(self._target_pos, self.player2_pos, casting='no')
+            np.add(self._target_pos, move, out=self._target_pos)
+            assert self.is_valid_pos(self._target_pos), 'illegal move by P2: invalid position'
+            assert self.is_empty_pos(self._target_pos), 'illegal move by P2: suicide'
+
+            # update game state
+            np.copyto(self.player2_pos, self._target_pos, casting='no')
+            self.player2_head -= 1  # the only difference in logic between the players
             if self.is_candy_pos(self.player2_pos):
                 self.player2_length += 1
                 self.remove_candy(self.player2_pos)
-            self.grid[tuple(self.player2_pos)] = -self.player2_turn
+            self.grid[tuple(self.player2_pos)] = self.player2_head
         pass
 
     def spawn_candy(self, pos: ndarray):
@@ -207,9 +212,12 @@ class Board:
     def remove_candy(self, pos: ndarray):
         self.candies.remove(pos)
 
+    def __len__(self) -> int:
+        return self.width * self.height
+
     def __eq__(self, other) -> bool:
-        return self.player1_turn == other.player1_turn and \
-            self.player2_turn == other.player2_turn and \
+        return self.player1_head == other.player1_head and \
+            self.player2_head == other.player2_head and \
             np.array_equal(self.grid, other.grid)
 
     def __str__(self):
@@ -217,7 +225,7 @@ class Board:
         str_grid[self.get_player1_mask()] = 'a'
         str_grid[self.get_player2_mask()] = 'b'
         str_grid[self.get_candy_mask()] = '*'
-        if len(self.player1_pos) > 0:
+        if self.player1_length > 0:
             str_grid[tuple(self.player1_pos)] = 'A'
             str_grid[tuple(self.player2_pos)] = 'B'
 
@@ -238,5 +246,5 @@ class Board:
 
     def __repr__(self):
         # TODO add turn info
-        str_board = self.__str__()
+        str_board = str(self)
         return str_board

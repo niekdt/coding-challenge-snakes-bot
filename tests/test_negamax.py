@@ -1,3 +1,7 @@
+import contextlib
+import os
+import time
+
 import numpy as np
 
 from ..bots.negamax import MinimaxBot
@@ -25,3 +29,17 @@ def test_winning_move():
         candies=[]
     )
     assert move == Move.UP
+
+
+def test_computation_time():
+    bot = MinimaxBot(id=0, grid_size=(5, 5), depth=9)
+
+    start = time.time()
+    with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
+        bot.determine_next_move(
+            snake=Snake(id=0, positions=np.array([[0, 0]])),
+            other_snakes=[Snake(id=1, positions=np.array([[4, 4]]))],
+            candies=[]
+        )
+    print(f'\nSearch took {(time.time() - start) * 1000:.2f} ms')
+    assert (time.time() - start) < .6

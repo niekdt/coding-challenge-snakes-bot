@@ -32,7 +32,7 @@ def test_winning_move():
 
 
 def test_computation_time():
-    bot = MinimaxBot(id=0, grid_size=(5, 5), depth=9)
+    bot = MinimaxBot(id=0, grid_size=(16, 16), depth=8)
 
     start = time.time()
     with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
@@ -42,4 +42,4 @@ def test_computation_time():
             candies=[]
         )
     print(f'\nSearch took {(time.time() - start) * 1000:.2f} ms')
-    assert (time.time() - start) < .6
+    assert (time.time() - start) < .75

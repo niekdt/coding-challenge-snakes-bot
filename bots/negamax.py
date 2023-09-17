@@ -1,5 +1,6 @@
 import time
 from copy import deepcopy
+from random import choice
 from typing import List
 
 import numpy as np
@@ -52,7 +53,12 @@ class MinimaxBot(Bot):
 
         # select best move
         best_value = max(move_values)
-        best_move = moves[move_values.index(best_value)]
+        best_moves = [moves[i] for i in range(len(move_values)) if move_values[i] == best_value]
+        if len(best_moves) > 1:
+            print(f'Choosing randomly between {len(best_moves)} moves with same score.')
+            best_move = choice(best_moves)
+        else:
+            best_move = best_moves[0]
 
         end = time.time()
         m = as_move(best_move)

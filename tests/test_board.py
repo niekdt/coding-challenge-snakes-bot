@@ -267,7 +267,7 @@ def test_set_state():
         b.grid,
         np.array([[1, 0], [0, -1]])
     )
-    assert len(b.candies) == 0
+    assert not b.has_candy()
 
     b2 = Board(2, 2)
     b2.set_state(
@@ -281,7 +281,7 @@ def test_set_state():
         b2.grid,
         np.array([[1, 2], [0, -1]])
     )
-    assert len(b2.candies) == 0
+    assert not b2.has_candy()
 
     b3 = Board(2, 2)
     b3.set_state(
@@ -295,7 +295,7 @@ def test_set_state():
         b3.grid,
         np.array([[1, 2], [-2, -1]])
     )
-    assert len(b3.candies) == 0
+    assert not b.has_candy()
 
 
 def test_as_move():

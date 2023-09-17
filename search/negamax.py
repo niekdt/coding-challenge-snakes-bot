@@ -19,8 +19,8 @@ def negamax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> flo
 
     best_value = -inf
     for m in moves:
-        new_board = deepcopy(board)
-        new_board.perform_move(m, player=player)
-        value = -negamax(new_board, depth=depth - 1, maximize=not maximize, eval_fun=eval_fun)
+        board.perform_move(m, player=player)
+        value = -negamax(board, depth=depth - 1, maximize=not maximize, eval_fun=eval_fun)
+        board.undo_move(player=player)
         best_value = max(best_value, value)
     return best_value

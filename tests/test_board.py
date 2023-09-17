@@ -298,6 +298,29 @@ def test_set_state():
     assert not b.has_candy()
 
 
+def test_set_state_candy():
+    # one candy
+    b = Board(2, 2)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1]])),
+        candies=[(1, 0)]
+    )
+    assert b.has_candy()
+    assert b.is_candy_pos(np.array((1, 0)))
+
+    # two candies
+    b2 = Board(2, 2)
+    b2.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1]])),
+        candies=[(1, 0), (0, 1)]
+    )
+    assert b2.has_candy()
+    assert b2.is_candy_pos(np.array((1, 0)))
+    assert b2.is_candy_pos(np.array((0, 1)))
+
+
 def test_as_move():
     assert as_move(LEFT) == Move.LEFT
     assert as_move(RIGHT) == Move.RIGHT

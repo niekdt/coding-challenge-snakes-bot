@@ -3,13 +3,14 @@ from copy import deepcopy
 from typing import List
 
 import numpy as np
+from numpy import Inf
 
 from ..eval import death
 from ....snake import Snake
 from ....bot import Bot
 from ....constants import Move
 from ..board import Board, as_move
-from ..search.minimax import minimax
+from ..search.negamax import minimax
 
 
 class MinimaxBot(Bot):
@@ -42,11 +43,11 @@ class MinimaxBot(Bot):
 
         moves = board.get_valid_moves(player=1)
 
-        move_values = [0.0, ] * len(moves)
+        move_values = [-Inf] * len(moves)
         for i, m in enumerate(moves):
             new_board = deepcopy(board)
             new_board.perform_move(m, player=1)
-            move_values[i] = minimax(new_board, depth=self.depth, maximize=True, eval_fun=self.eval_fun)
+            move_values[i] = -minimax(new_board, depth=self.depth - 1, maximize=False, eval_fun=self.eval_fun)
             print(f'\t Root {as_move(m)} yielded score {move_values[i]}')
 
         # select best move

@@ -5,4 +5,4 @@ from math import inf
 # -inf: if the player has no valid move options, i.e., will die this turn
 # 0: otherwise
 def evaluate(board, player) -> float:
-    return -inf if len(board.get_valid_moves(player)) == 0 else 0
+    return -inf if board.can_move(player) == 0 else 0

@@ -137,6 +137,14 @@ class Board:
     def has_candy(self) -> bool:
         return np.any(self.candy_mask)
 
+    def can_move(self, player: int) -> bool:
+        pos = self.player1_pos if player == 1 else self.player2_pos
+
+        return (pos[0] > 0 and self.is_empty_pos(pos + LEFT)) or \
+            (pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)) or \
+            (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
+            (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
+
     def get_valid_moves(self, player: int) -> List[ndarray]:
         if player == 1:
             pos = self.player1_pos

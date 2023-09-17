@@ -4,7 +4,7 @@ from math import inf
 from ..board import Board
 
 
-def minimax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> float:
+def negamax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> float:
     player = 2 - maximize
     print(f'\t= D{depth} for P{player} =')
     if depth == 0:
@@ -21,6 +21,6 @@ def minimax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> flo
     for m in moves:
         new_board = deepcopy(board)
         new_board.perform_move(m, player=player)
-        value = -minimax(new_board, depth=depth - 1, maximize=not maximize, eval_fun=eval_fun)
+        value = -negamax(new_board, depth=depth - 1, maximize=not maximize, eval_fun=eval_fun)
         best_value = max(best_value, value)
     return best_value

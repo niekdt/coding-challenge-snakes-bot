@@ -11,7 +11,7 @@ from ....snake import Snake
 from ....bot import Bot
 from ....constants import Move
 from ..board import Board, as_move
-from ..search.negamax import minimax
+from ..search.negamax import negamax
 
 
 class MinimaxBot(Bot):
@@ -28,7 +28,7 @@ class MinimaxBot(Bot):
 
     @property
     def name(self) -> str:
-        return 'Sneek-minimax'
+        return 'Sneek'
 
     @property
     def contributor(self) -> str:
@@ -48,7 +48,7 @@ class MinimaxBot(Bot):
         for i, m in enumerate(moves):
             new_board = deepcopy(board)
             new_board.perform_move(m, player=1)
-            move_values[i] = -minimax(new_board, depth=self.depth - 1, maximize=False, eval_fun=self.eval_fun)
+            move_values[i] = -negamax(new_board, depth=self.depth - 1, maximize=False, eval_fun=self.eval_fun)
             print(f'\t Root {as_move(m)} yielded score {move_values[i]}')
 
         # select best move

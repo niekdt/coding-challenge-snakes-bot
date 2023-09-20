@@ -7,11 +7,12 @@ from math import inf
 import numpy as np
 
 from ..eval import death
+from ..search.choose import best_move
 from ....snake import Snake
 from ....bot import Bot
 from ....constants import Move
 from ..board import Board, as_move
-from ..search.negamax import negamax_ab
+from ..search.negamax import negamax_ab, negamax_ab_moves
 
 
 class NegamaxAbBot(Bot):
@@ -41,37 +42,11 @@ class NegamaxAbBot(Bot):
         print('Initial game state:', end='')
         print(self.board)
 
-        moves = self.board.get_valid_moves(player=1)
+        move_values = negamax_ab_moves(self.board, depth=self.depth, eval_fun=self.eval_fun)
 
-        move_values = [-inf] * len(moves)
-        alpha = -inf
-        beta = inf
-        for i, m in enumerate(moves):
-            self.board.perform_move(m, player=1)
-            move_values[i] = -negamax_ab(
-                self.board,
-                depth=self.depth - 1,
-                player=-1,
-                alpha=-beta,
-                beta=-alpha,
-                eval_fun=self.eval_fun
-            )
-            self.board.undo_move(player=1)
-            alpha = max(alpha, move_values[i])
-            print(f'\t Root {as_move(m)} yielded score {move_values[i]}')
+        print('Root move evaluations:')
+        print(move_values)
+        move = best_move(move_values)
 
-        # select best move
-        if math.isinf(alpha):
-            best_move = next(moves[i] for i in range(len(move_values)) if math.isinf(move_values[i]))
-        else:
-            best_moves = [moves[i] for i in range(len(move_values)) if abs(move_values[i] - alpha) < .001]
-            if len(best_moves) > 1:
-                print(f'Choosing randomly between {len(best_moves)} moves with same score.')
-                best_move = choice(best_moves)
-            else:
-                best_move = best_moves[0]
-
-        end = time.time()
-        m = as_move(best_move)
-        print(f'== Decided on {m} in {(end - start) * 1000:.2f} ms ==')
-        return m
+        print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
+        return move

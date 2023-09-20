@@ -1,6 +1,20 @@
 from math import inf
 
-from ..board import Board
+from snakes.constants import Move
+from ..board import Board, as_move
+
+
+def negamax_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
+    move_vecs = board.get_valid_moves(player=1)
+
+    move_values = dict()
+    for i, m in enumerate(move_vecs):
+        board.perform_move(m, player=1)
+        move = as_move(m)
+        move_values[move] = -negamax(board, depth=depth - 1, player=-1, eval_fun=eval_fun)
+        board.undo_move(player=1)
+
+    return move_values
 
 
 def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
@@ -20,6 +34,30 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
         )
         board.undo_move(player=player)
     return best_value
+
+
+def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
+    move_vecs = board.get_valid_moves(player=1)
+
+    alpha = -inf
+    beta = inf
+    move_values = dict()
+    for i, m in enumerate(move_vecs):
+        board.perform_move(m, player=1)
+        move = as_move(m)
+        value = -negamax_ab(
+            board,
+            depth=depth - 1,
+            player=-1,
+            alpha=-beta,
+            beta=-alpha,
+            eval_fun=eval_fun
+        )
+        board.undo_move(player=1)
+        move_values[move] = value
+        alpha = max(alpha, value)
+
+    return move_values
 
 
 def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:

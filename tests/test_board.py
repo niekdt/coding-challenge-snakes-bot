@@ -130,10 +130,17 @@ def test_perform_move():
     # move P1
     b.perform_move(move=Move.RIGHT, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 0)))
+    assert b.is_empty_pos(np.array((0, 0)))
+    assert not b.is_empty_pos(np.array((1, 0)))
+    assert not b.is_empty_pos(np.array((2, 2)))
 
     # move P2
     b.perform_move(move=Move.LEFT, player=2)
     assert_array_equal(b.player2_pos, np.array((1, 2)))
+    assert b.is_empty_pos(np.array((0, 0)))
+    assert b.is_empty_pos(np.array((2, 2)))
+    assert not b.is_empty_pos(np.array((1, 0)))
+    assert not b.is_empty_pos(np.array((1, 2)))
 
     # move P1 to center
     b.perform_move(move=Move.UP, player=1)

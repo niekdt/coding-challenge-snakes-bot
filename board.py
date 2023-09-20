@@ -38,24 +38,13 @@ class Board:
         self.move_head_stack: Deque[int] = deque(maxlen=32)
         self.move_candy_stack: Deque[bool] = deque(maxlen=32)
 
-    def spawn(self, pos1: tuple, pos2: tuple) -> None:
-        """Spawn snakes of length 1 at the given positions"""
-        assert isinstance(pos1, tuple)
-        assert isinstance(pos2, tuple)
-        assert self.player1_head == 0 and self.player2_head == 0, 'players have already spawned'
-
-        self.player1_head = 1
-        self.player2_head = -1
-        self.player1_length = 1
-        self.player2_length = 1
-        self.player1_pos = np.array(pos1, dtype=int)
-        self.player2_pos = np.array(pos2, dtype=int)
-        assert self.is_valid_pos(self.player1_pos), 'invalid spawn pos for P1'
-        assert self.is_valid_pos(self.player2_pos), 'invalid spawn pos for P2'
-
-        self.grid[pos1] = self.player1_head
-        self.grid[pos2] = self.player2_head
-        pass
+    def spawn(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> None:
+        """Spawn snakes of length 1 at the given positions. Merely for testing purposes."""
+        self.set_state(
+            snake1=Snake(id=0, positions=np.array([pos1])),
+            snake2=Snake(id=1, positions=np.array([pos2])),
+            candies=[]
+        )
 
     def spawn_candy(self, pos: ndarray) -> None:
         self.candies.append(tuple(pos))

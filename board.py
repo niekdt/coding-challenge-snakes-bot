@@ -103,7 +103,9 @@ class Board:
         return self.candy_mask[pos[0], pos[1]]
 
     def is_empty_pos(self, pos: ndarray) -> bool:
-        return self.get_empty_mask()[pos[0], pos[1]]
+        return self.player2_head + self.player2_length <= \
+            self.grid[pos[0], pos[1]] <= \
+            self.player1_head - self.player1_length
 
     def get_player_pos(self, player: int) -> ndarray[int]:
         return self.player1_pos if player == 1 else self.player2_pos

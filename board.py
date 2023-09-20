@@ -314,3 +314,15 @@ def as_move(move: ndarray) -> Move:
         return Move.RIGHT
     else:
         return Move.LEFT
+
+
+def distance(pos1, pos2) -> int:
+    """L1 distance between the given positions"""
+    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
+
+def distance_grid(width: int, height: int, pos) -> ndarray:
+    """L1 distance to each cell on the board from the given position"""
+    rows = np.abs(np.arange(width) - pos[0])
+    cols = np.abs(np.arange(height) - pos[1])
+    return rows[:, np.newaxis] + cols[np.newaxis, :]

@@ -5,7 +5,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from ..board import Board, as_move
-from ....constants import Move, LEFT, DOWN, RIGHT, UP
+from ....constants import Move, MOVE_VALUE_TO_DIRECTION, MOVES
 from ....snake import Snake
 
 
@@ -128,29 +128,16 @@ def test_perform_move():
     b.spawn(pos1=(0, 0), pos2=(2, 2))
 
     # move P1
-    with pytest.raises(AssertionError):
-        b.perform_move(move=LEFT, player=1)  # cannot move left
-    with pytest.raises(AssertionError):
-        b.perform_move(move=DOWN, player=1)  # cannot move down
-
-    b.perform_move(move=RIGHT, player=1)
+    b.perform_move(move=Move.RIGHT, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 0)))
 
     # move P2
-    with pytest.raises(AssertionError):
-        b.perform_move(move=RIGHT, player=2)  # cannot move right
-    with pytest.raises(AssertionError):
-        b.perform_move(move=UP, player=2)  # cannot move up
-    b.perform_move(move=LEFT, player=2)
+    b.perform_move(move=Move.LEFT, player=2)
     assert_array_equal(b.player2_pos, np.array((1, 2)))
 
     # move P1 to center
-    b.perform_move(move=UP, player=1)
+    b.perform_move(move=Move.UP, player=1)
     assert_array_equal(b.player1_pos, np.array((1, 1)))
-
-    # attempt to move P2 to center (suicide)
-    with pytest.raises(AssertionError):
-        b.perform_move(move=DOWN, player=2)
 
 
 def test_perform_move_candy():
@@ -158,7 +145,7 @@ def test_perform_move_candy():
     b.spawn(pos1=(0, 0), pos2=(2, 2))
     candy_pos = np.array([1, 0])
     b.spawn_candy(candy_pos)
-    b.perform_move(move=RIGHT, player=1)
+    b.perform_move(move=Move.RIGHT, player=1)
     assert not b.has_candy()  # candy should have been eaten
     assert b.player1_length == 2
     assert b.player2_length == 1
@@ -168,21 +155,21 @@ def test_undo_move():
     b = Board(3, 3)
     b.spawn(pos1=(0, 0), pos2=(2, 2))
     b_start = b.copy()
-    with pytest.raises(AssertionError):
+    with pytest.raises(Exception):
         b.undo_move(player=-1)
-    b.perform_move(move=RIGHT, player=1)
+    b.perform_move(move=Move.RIGHT, player=1)
     b.undo_move(player=1)
     assert b == b_start
-    with pytest.raises(AssertionError):
+    with pytest.raises(Exception):
         b.undo_move(player=1)
-    with pytest.raises(AssertionError):
+    with pytest.raises(Exception):
         b.undo_move(player=-1)
 
-    b.perform_move(move=RIGHT, player=1)
-    with pytest.raises(AssertionError):
+    b.perform_move(move=Move.RIGHT, player=1)
+    with pytest.raises(Exception):
         b.undo_move(player=-1)  # cannot undo because P1 moved last
     b_ref2 = b.copy()
-    b.perform_move(move=LEFT, player=-1)
+    b.perform_move(move=Move.LEFT, player=-1)
 
     b.undo_move(player=-1)
     assert b == b_ref2
@@ -190,9 +177,9 @@ def test_undo_move():
     b.undo_move(player=1)
     assert b == b_start
 
-    with pytest.raises(AssertionError):
+    with pytest.raises(Exception):
         b.undo_move(player=1)
-    with pytest.raises(AssertionError):
+    with pytest.raises(Exception):
         b.undo_move(player=-1)
 
 
@@ -203,7 +190,7 @@ def test_undo_move_candy():
     b.spawn_candy(candy_pos)
     b_start = b.copy()
 
-    b.perform_move(move=RIGHT, player=1)
+    b.perform_move(move=Move.RIGHT, player=1)
     assert not b.has_candy()
     b.undo_move(player=1)
     assert b.has_candy()
@@ -219,38 +206,38 @@ def test_print():
 
     b.player1_length = 2
     b.player2_length = 2
-    b.perform_move(RIGHT, player=1)
-    b.perform_move(LEFT, player=2)
+    b.perform_move(Move.RIGHT, player=1)
+    b.perform_move(Move.LEFT, player=2)
     assert str(b) == '\n+---+\n|·Bb|\n|·aA|\n+---+'
 
 
 def test_move_generation():
     b = Board(3, 2)
     b.spawn(pos1=(1, 0), pos2=(2, 1))
-    moves1 = list(map(tuple, b.get_valid_moves(1)))
+    moves1 = b.get_valid_moves(player=1)
     assert len(moves1) == 3
-    assert tuple(LEFT) in moves1
-    assert tuple(RIGHT) in moves1
-    assert tuple(UP) in moves1
+    assert Move.LEFT in moves1
+    assert Move.RIGHT in moves1
+    assert Move.UP in moves1
 
-    moves2 = list(map(tuple, b.get_valid_moves(2)))
+    moves2 = b.get_valid_moves(player=-1)
     assert len(moves2) == 2
-    assert tuple(LEFT) in moves2
-    assert tuple(DOWN) in moves2
+    assert Move.LEFT in moves2
+    assert Move.DOWN in moves2
 
     # perform a move and recheck the options
-    b.perform_move(LEFT, 1)
-    moves12 = list(map(tuple, b.get_valid_moves(1)))
+    b.perform_move(Move.LEFT, player=1)
+    moves12 = b.get_valid_moves(player=1)
     assert len(moves12) == 2
-    assert tuple(RIGHT) in moves12
-    assert tuple(UP) in moves12
+    assert Move.RIGHT in moves12
+    assert Move.UP in moves12
 
-    b.perform_move(LEFT, 2)
-    moves22 = list(map(tuple, b.get_valid_moves(2)))
+    b.perform_move(Move.LEFT, player=2)
+    moves22 = b.get_valid_moves(2)
     assert len(moves22) == 3
-    assert tuple(LEFT) in moves22
-    assert tuple(RIGHT) in moves22
-    assert tuple(DOWN) in moves22
+    assert Move.LEFT in moves22
+    assert Move.RIGHT in moves22
+    assert Move.DOWN in moves22
 
 
 def test_set_state():
@@ -334,8 +321,6 @@ def test_set_state_candy():
     assert b.is_candy_pos(np.array((0, 1)))
 
 
-def test_as_move():
-    assert as_move(LEFT) == Move.LEFT
-    assert as_move(RIGHT) == Move.RIGHT
-    assert as_move(UP) == Move.UP
-    assert as_move(DOWN) == Move.DOWN
+@pytest.mark.parametrize('move', MOVES)
+def test_as_move(move):
+    assert as_move(MOVE_VALUE_TO_DIRECTION[move]) == move

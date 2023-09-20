@@ -6,10 +6,10 @@ from typing import Self, List, Deque
 import numpy as np
 from numpy import ndarray
 
-from ...constants import LEFT, RIGHT, UP, DOWN, Move
+from ...constants import LEFT, RIGHT, UP, DOWN, Move, MOVE_VALUE_TO_DIRECTION
 from ...snake import Snake
 
-ALL_MOVES = (LEFT, RIGHT, UP, DOWN)
+ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
 
 
 # TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
@@ -55,10 +55,6 @@ class Board:
         self.candy_mask[pos[0], pos[1]] = False
 
     def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
-        assert isinstance(snake1, Snake)
-        assert isinstance(snake2, Snake)
-        assert isinstance(candies, list)
-
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid
@@ -145,7 +141,7 @@ class Board:
             (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
             (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
 
-    def get_valid_moves(self, player: int) -> list[ndarray]:
+    def get_valid_moves(self, player: int) -> list[Move]:
         if player == 1:
             pos = self.player1_pos
         else:
@@ -159,18 +155,13 @@ class Board:
         return list(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
 
     # performing a move increments the turn counter and places a new wall
-    def perform_move(self, move: ndarray, player: int) -> None:
-        assert move[0] in (-1, 0, 1) and \
-               move[1] in (-1, 0, 1) and \
-               move[0] == 0 or move[1] == 0, 'invalid move vector'
+    def perform_move(self, move: Move, player: int) -> None:
+        move_vec = MOVE_VALUE_TO_DIRECTION[move]
 
         # TODO remove branching
         if player == 1:
             np.copyto(self._target_pos, self.player1_pos, casting='no')
-            np.add(self._target_pos, move, out=self._target_pos)  # compute new pos
-
-            assert self.is_valid_pos(self._target_pos), f'illegal move by P{player}: invalid position'
-            assert self.is_empty_pos(self._target_pos), f'illegal move by P{player}: suicide'
+            np.add(self._target_pos, move_vec, out=self._target_pos)  # compute new pos
 
             # update game state
             ate_candy = self.is_candy_pos(self._target_pos)
@@ -186,10 +177,7 @@ class Board:
                 self.remove_candy(self.player1_pos)
         else:
             np.copyto(self._target_pos, self.player2_pos, casting='no')
-            np.add(self._target_pos, move, out=self._target_pos)
-
-            assert self.is_valid_pos(self._target_pos), 'illegal move by P2: invalid position'
-            assert self.is_empty_pos(self._target_pos), 'illegal move by P2: suicide'
+            np.add(self._target_pos, move_vec, out=self._target_pos)
 
             # update game state
             ate_candy = self.is_candy_pos(self._target_pos)
@@ -208,7 +196,6 @@ class Board:
 
     def undo_move(self, player: int) -> None:
         assert player == self.last_player, f'Cannot undo move of P{player_num(player)} because the other moved last'
-        assert len(self.move_pos_stack) > 0, 'cannot undo any more moves: move stack is empty'
 
         ate_candy = self.move_candy_stack.pop()
 

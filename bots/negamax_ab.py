@@ -1,18 +1,15 @@
-import math
 import time
-from random import choice
 from typing import List
-from math import inf
 
 import numpy as np
 
+from ..board import Board
 from ..eval import death
 from ..search.choose import best_move
-from ....snake import Snake
+from ..search.negamax import negamax_ab_moves
 from ....bot import Bot
 from ....constants import Move
-from ..board import Board, as_move
-from ..search.negamax import negamax_ab, negamax_ab_moves
+from ....snake import Snake
 
 
 class NegamaxAbBot(Bot):

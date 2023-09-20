@@ -1,17 +1,16 @@
 from math import inf
 
 from snakes.constants import Move
-from ..board import Board, as_move
+from ..board import Board
 
 
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
-    move_vecs = board.get_valid_moves(player=1)
-    assert len(move_vecs) > 0, 'no possible moves!'
+    moves = board.get_valid_moves(player=1)
+    assert len(moves) > 0, 'no possible moves!'
 
     move_values = dict()
-    for i, m in enumerate(move_vecs):
-        board.perform_move(m, player=1)
-        move = as_move(m)
+    for move in moves:
+        board.perform_move(move, player=1)
         move_values[move] = -negamax(board, depth=depth - 1, player=-1, eval_fun=eval_fun)
         board.undo_move(player=1)
 
@@ -27,8 +26,8 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
         return -inf  # TODO compute game score, as we may still have won if the other player died first
 
     best_value = -inf
-    for m in moves:
-        board.perform_move(m, player=player)
+    for move in moves:
+        board.perform_move(move, player=player)
         best_value = max(
             best_value,
             -negamax(board, depth=depth - 1, player=-player, eval_fun=eval_fun)
@@ -38,15 +37,14 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
 
 
 def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
-    move_vecs = board.get_valid_moves(player=1)
-    assert len(move_vecs) > 0, 'no possible moves!'
+    moves = board.get_valid_moves(player=1)
+    assert len(moves) > 0, 'no possible moves!'
 
     alpha = -inf
     beta = inf
     move_values = dict()
-    for i, m in enumerate(move_vecs):
-        board.perform_move(m, player=1)
-        move = as_move(m)
+    for move in moves:
+        board.perform_move(move, player=1)
         value = -negamax_ab(
             board,
             depth=depth - 1,
@@ -74,8 +72,8 @@ def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float,
         return -inf  # TODO compute game score, as we may still have won if the other player died first
 
     best_value = -inf
-    for m in moves:
-        board.perform_move(m, player=player)
+    for move in moves:
+        board.perform_move(move, player=player)
         best_value = max(
             best_value,
             -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)

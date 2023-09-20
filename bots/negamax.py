@@ -46,7 +46,7 @@ class NegamaxBot(Bot):
         move_values = [-inf] * len(moves)
         for i, m in enumerate(moves):
             self.board.perform_move(m, player=1)
-            move_values[i] = -negamax(self.board, depth=self.depth - 1, maximize=False, eval_fun=self.eval_fun)
+            move_values[i] = -negamax(self.board, depth=self.depth - 1, player=-1, eval_fun=self.eval_fun)
             self.board.undo_move(player=1)
             print(f'\t Root {as_move(m)} yielded score {move_values[i]}')
 

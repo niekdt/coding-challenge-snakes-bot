@@ -51,7 +51,7 @@ class NegamaxAbBot(Bot):
             move_values[i] = -negamax_ab(
                 self.board,
                 depth=self.depth - 1,
-                maximize=False,
+                player=-1,
                 alpha=-beta,
                 beta=-alpha,
                 eval_fun=self.eval_fun

@@ -70,6 +70,8 @@ class Board:
         assert isinstance(snake2, Snake)
         assert isinstance(candies, list)
 
+        self.last_player = -1  # set P2 to have moved last
+
         # clear grid
         self.grid.fill(0)
         self.candy_mask.fill(False)
@@ -87,12 +89,10 @@ class Board:
         # snake positions are in reverse order (head of the list is tail of the snake)
         # tail = 1, head = p1_head
         for i, pos in enumerate(snake1.positions):
-            #self.grid[pos[0], pos[1]] = i + 1
             self.grid[pos[0], pos[1]] = self.player1_head - i
 
         # tail = -1, head = p2_head
         for i, pos in enumerate(snake2.positions):
-            #self.grid[pos[0], pos[1]] = -i - 1
             self.grid[pos[0], pos[1]] = self.player2_head + i
 
         # set player positions to the head of the snake (the tail of the list)
@@ -218,7 +218,7 @@ class Board:
         pass
 
     def undo_move(self, player: int) -> None:
-        assert player == self.last_player, f'Cannot undo move of P{player} because the other player moved last'
+        assert player == self.last_player, f'Cannot undo move of P{player_num(player)} because the other moved last'
         assert len(self.move_pos_stack) > 0, 'cannot undo any more moves: move stack is empty'
 
         ate_candy = self.move_candy_stack.pop()
@@ -239,7 +239,7 @@ class Board:
             np.copyto(self.player2_pos, self.move_pos_stack.pop())
             self.player2_head += 1
 
-        self.last_player = 3 - self.last_player
+        self.last_player = -self.last_player
         pass
 
     def inherit(self, board: Self) -> None:
@@ -326,3 +326,7 @@ def distance_grid(width: int, height: int, pos) -> ndarray:
     rows = np.abs(np.arange(width) - pos[0])
     cols = np.abs(np.arange(height) - pos[1])
     return rows[:, np.newaxis] + cols[np.newaxis, :]
+
+
+def player_num(player) -> int:
+    return int(1.5 - player / 2)

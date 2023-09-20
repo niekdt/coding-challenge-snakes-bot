@@ -3,8 +3,7 @@ from math import inf
 from ..board import Board
 
 
-def negamax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> float:
-    player = 2 - maximize
+def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
     if depth == 0:
         return eval_fun(board, player=player)
 
@@ -17,14 +16,13 @@ def negamax(board: Board, depth: int, maximize: bool, eval_fun: callable) -> flo
         board.perform_move(m, player=player)
         best_value = max(
             best_value,
-            -negamax(board, depth=depth - 1, maximize=not maximize, eval_fun=eval_fun)
+            -negamax(board, depth=depth - 1, player=-player, eval_fun=eval_fun)
         )
         board.undo_move(player=player)
     return best_value
 
 
-def negamax_ab(board: Board, depth: int, maximize: bool, alpha: float, beta: float, eval_fun: callable) -> float:
-    player = 2 - maximize
+def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:
     if depth == 0:
         return eval_fun(board, player=player)
 
@@ -37,7 +35,7 @@ def negamax_ab(board: Board, depth: int, maximize: bool, alpha: float, beta: flo
         board.perform_move(m, player=player)
         best_value = max(
             best_value,
-            -negamax_ab(board, depth=depth - 1, maximize=not maximize, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
+            -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
         )
         board.undo_move(player=player)
         alpha = max(alpha, best_value)

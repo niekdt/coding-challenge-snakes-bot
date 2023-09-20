@@ -170,22 +170,22 @@ def test_undo_move():
     b.spawn(pos1=(0, 0), pos2=(2, 2))
     b_start = b.copy()
     with pytest.raises(AssertionError):
-        b.undo_move(player=2)
+        b.undo_move(player=-1)
     b.perform_move(move=RIGHT, player=1)
     b.undo_move(player=1)
     assert b == b_start
     with pytest.raises(AssertionError):
         b.undo_move(player=1)
     with pytest.raises(AssertionError):
-        b.undo_move(player=2)
+        b.undo_move(player=-1)
 
     b.perform_move(move=RIGHT, player=1)
     with pytest.raises(AssertionError):
-        b.undo_move(player=2)  # cannot undo because P1 moved last
+        b.undo_move(player=-1)  # cannot undo because P1 moved last
     b_ref2 = b.copy()
-    b.perform_move(move=LEFT, player=2)
+    b.perform_move(move=LEFT, player=-1)
 
-    b.undo_move(player=2)
+    b.undo_move(player=-1)
     assert b == b_ref2
 
     b.undo_move(player=1)
@@ -194,7 +194,7 @@ def test_undo_move():
     with pytest.raises(AssertionError):
         b.undo_move(player=1)
     with pytest.raises(AssertionError):
-        b.undo_move(player=2)
+        b.undo_move(player=-1)
 
 
 def test_undo_move_candy():

@@ -8,8 +8,12 @@ def best_move(move_values: dict[Move, float], tolerance: float = .001) -> Move:
     """Select the highest scored move. Breaks ties at random."""
     best_value = max(move_values.values())
     if isinf(best_value):
-        print('Choosing first winning move')
-        return next(m for m, v in move_values.items() if v == inf)
+        if best_value > 0:
+            print('Choosing first winning move')
+            return next(m for m, v in move_values.items() if v == inf)
+        else:
+            print('Choosing forced losing move')
+            return list(move_values.keys())[0]
     else:
         best_moves = [m for m, v in move_values.items() if abs(v - best_value) < tolerance]
         if len(best_moves) > 1:

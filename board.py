@@ -113,15 +113,17 @@ class Board:
     def get_candies(self) -> list[tuple[int, int]]:
         return self.candies
 
-    # TODO optimize
     def get_empty_mask(self) -> ndarray[bool]:
-        return (self.get_player1_mask() == False) & (self.get_player2_mask() == False)
+        return np.logical_and(
+            self.player2_head + self.player2_length <= self.grid,
+            self.grid <= self.player1_head - self.player1_length
+        )
 
     def get_player1_mask(self) -> ndarray[bool]:
-        return self.grid > max(0, self.player1_head - self.player1_length)
+        return self.grid > self.player1_head - self.player1_length
 
     def get_player2_mask(self) -> ndarray[bool]:
-        return self.grid < min(0, self.player2_head + self.player2_length)
+        return self.grid < self.player2_head + self.player2_length
 
     def get_player_mask(self, player: int) -> ndarray[bool]:
         if player == 1:

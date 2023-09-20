@@ -9,16 +9,13 @@ def evaluate(board, player) -> float:
         return -inf
 
     # length
-    score = board.player1_length - board.player2_length if player == 1 else board.player2_length - board.player1_length
-    score *= 10
+    score = 10 * (board.player1_length - board.player2_length)
 
     # candy dist
     if board.has_candy():
-        pos = board.get_player_pos(player)
-        other_pos = board.get_player_pos(3 - player)
-        d = sum([sqrt(distance(pos, candy_pos)) for candy_pos in board.get_candies()])
-        other_d = sum([sqrt(distance(other_pos, candy_pos)) for candy_pos in board.get_candies()])
+        d1 = sum([sqrt(distance(board.player1_pos, candy_pos)) for candy_pos in board.get_candies()])
+        d2 = sum([sqrt(distance(board.player2_pos, candy_pos)) for candy_pos in board.get_candies()])
 
-        score += (other_d - d) / 16
+        score += (d1 - d2) / 16
 
-    return score
+    return player * score

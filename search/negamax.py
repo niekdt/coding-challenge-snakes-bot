@@ -62,7 +62,10 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
 
 def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:
     if depth == 0:
-        return eval_fun(board, player=player)
+        s = eval_fun(board, player=player)
+        # print(board)
+        # print(f'Score: {s}')
+        return s
 
     moves = board.get_valid_moves(player=player)
     if len(moves) == 0:  # current player is stuck

@@ -7,6 +7,6 @@ def evaluate(board, player) -> float:
         d1 = min([distance(board.player1_pos, candy_pos) for candy_pos in board.get_candies()])
         d2 = min([distance(board.player2_pos, candy_pos) for candy_pos in board.get_candies()])
 
-        score += (d2 - d1) / 16
+        score += (d2 - d1) / board.width
 
     return player * score

@@ -75,6 +75,7 @@ class Board:
         # clear grid
         self.grid.fill(0)
         self.candy_mask.fill(False)
+        self.candies.clear()
 
         # clear move stacks
         self.move_pos_stack.clear()
@@ -86,12 +87,11 @@ class Board:
         self.player1_head = self.player1_length
         self.player2_head = -self.player2_length
 
-        # snake positions are in reverse order (head of the list is tail of the snake)
-        # tail = 1, head = p1_head
+        # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
             self.grid[pos[0], pos[1]] = self.player1_head - i
 
-        # tail = -1, head = p2_head
+        # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
             self.grid[pos[0], pos[1]] = self.player2_head + i
 

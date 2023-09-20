@@ -31,5 +31,11 @@ def single_best_move(move_values: dict[Move, float], tolerance: float = .001) ->
     return moves[0]
 
 
-def assert_single_best_move(move_values: dict[Move, float], tolerance: float = .001) -> None:
-    single_best_move(move_values, tolerance)
+def has_single_best_move(move_values: dict[Move, float], tolerance: float = .001) -> bool:
+    best_value = max(move_values.values())
+    if isinf(best_value):
+        moves = [m for m, v in move_values.items() if v == inf]
+    else:
+        moves = [m for m, v in move_values.items() if abs(v - best_value) < tolerance]
+
+    return len(moves) == 1

@@ -263,25 +263,31 @@ def test_set_state():
     )
     assert b.player1_head == 1
     assert b.player2_head == -1
+    assert b.player1_length == 1
+    assert b.player2_length == 1
+    assert b.last_player == -1
     assert_array_equal(
         b.grid,
         np.array([[1, 0], [0, -1]])
     )
     assert not b.has_candy()
 
-    b2 = Board(2, 2)
-    b2.set_state(
+    # reuse board
+    b.set_state(
         snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1]])),
         candies=[]
     )
-    assert b2.player1_head == 2
-    assert b2.player2_head == -1
+    assert b.player1_head == 2
+    assert b.player2_head == -1
+    assert b.player1_length == 2
+    assert b.player2_length == 1
+    assert b.last_player == -1
     assert_array_equal(
-        b2.grid,
+        b.grid,
         np.array([[1, 2], [0, -1]])
     )
-    assert not b2.has_candy()
+    assert not b.has_candy()
 
     b3 = Board(2, 2)
     b3.set_state(
@@ -309,16 +315,24 @@ def test_set_state_candy():
     assert b.has_candy()
     assert b.is_candy_pos(np.array((1, 0)))
 
+    # no candies (reuse board)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1]])),
+        candies=[]
+    )
+    assert not b.has_candy()
+    assert not b.is_candy_pos(np.array((1, 0)))
+
     # two candies
-    b2 = Board(2, 2)
-    b2.set_state(
+    b.set_state(
         snake1=Snake(id=0, positions=np.array([[0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1]])),
         candies=[(1, 0), (0, 1)]
     )
-    assert b2.has_candy()
-    assert b2.is_candy_pos(np.array((1, 0)))
-    assert b2.is_candy_pos(np.array((0, 1)))
+    assert b.has_candy()
+    assert b.is_candy_pos(np.array((1, 0)))
+    assert b.is_candy_pos(np.array((0, 1)))
 
 
 def test_as_move():

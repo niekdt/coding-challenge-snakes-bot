@@ -13,7 +13,7 @@ from ...snake import Snake
 class Snek(Bot):
     def __init__(self, id: int, grid_size: tuple[int, int]) -> None:
         super().__init__(id, grid_size)
-        self.bot = NegamaxAbBot(id=id, grid_size=grid_size, depth=7, eval_fun=best.evaluate)
+        self.bot = NegamaxAbBot(id=id, grid_size=grid_size, depth=10, eval_fun=best.evaluate)
 
     @property
     def name(self):

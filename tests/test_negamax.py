@@ -1,17 +1,15 @@
 import contextlib
 import os
 import time
-from math import isinf, inf
+from math import inf
 
 import numpy as np
 import pytest
 
 from snakes.bots.niekdt.board import Board
-from snakes.bots.niekdt.bots.negamax_ab import NegamaxAbBot
-from snakes.bots.niekdt.eval import length, death, candy_dist
-from snakes.bots.niekdt.search.choose import best_move, assert_single_best_move
+from snakes.bots.niekdt.eval import length, death, candy_dist, best
+from snakes.bots.niekdt.search.choose import best_move, has_single_best_move
 from snakes.bots.niekdt.search.negamax import negamax_moves, negamax_ab_moves
-from ..bots.negamax import NegamaxBot
 from snakes.constants import Move
 from snakes.snake import Snake
 
@@ -49,19 +47,55 @@ def test_winning_move(depth, search):
     assert board == ref_board
 
 
-@pytest.mark.parametrize('depth', [1, 2, 3, 4])
-@pytest.mark.parametrize('size', [3])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('depth', [1, 2, 3, 4, 5, 6, 7])
+@pytest.mark.parametrize('size', [4, 8])
+@pytest.mark.parametrize('search', [negamax_moves])
 def test_goto_candy(depth, search, size):
     board = Board(size, size)
     board.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[0, 2]])),
-        candies=[np.array((size - 1, 0))]
+        snake1=Snake(id=0, positions=np.array([[1, 1]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2]])),
+        candies=[np.array((size - 1, 1))]
     )
+
     moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
-    assert_single_best_move(moves)
+
+    assert has_single_best_move(moves)
     assert best_move(moves) == Move.RIGHT
+
+
+@pytest.mark.parametrize('depth', [1, 6, 7])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+def test_goto_candy_far(depth, search):
+    board = Board(16, 16)
+    board.set_state(
+        snake1=Snake(id=0, positions=np.array([[13, 1], [13, 0], [12, 0]])),
+        snake2=Snake(id=1, positions=np.array([[6, 7], [6, 6]])),
+        candies=[np.array((0, 12)), np.array((1, 9)), np.array((4, 2))]
+    )
+
+    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    print(moves)
+
+    assert best_move(moves) in [Move.LEFT, Move.UP]
+    assert moves[Move.LEFT] == moves[Move.UP]
+
+
+@pytest.mark.parametrize('depth', [1, 6, 7])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+def test_goto_candy_near(depth, search):
+    board = Board(16, 16)
+    board.set_state(
+        snake1=Snake(id=0, positions=np.array([[5, 14], [4, 14]])),
+        snake2=Snake(id=1, positions=np.array([[13, 7], [13, 6]])),
+        candies=[np.array((6, 14)), np.array((7, 14)), np.array((6, 9))]
+    )
+
+    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    print(moves)
+
+    assert best_move(moves) == Move.RIGHT
+    assert has_single_best_move(moves)
 
 
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])

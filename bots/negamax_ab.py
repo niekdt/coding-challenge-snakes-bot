@@ -11,10 +11,10 @@ from ....snake import Snake
 from ....bot import Bot
 from ....constants import Move
 from ..board import Board, as_move
-from ..search.negamax import negamax
+from ..search.negamax import negamax_ab
 
 
-class NegamaxBot(Bot):
+class NegamaxAbBot(Bot):
     def __init__(
         self, id: int,
         grid_size: tuple[int, int],
@@ -44,18 +44,27 @@ class NegamaxBot(Bot):
         moves = self.board.get_valid_moves(player=1)
 
         move_values = [-inf] * len(moves)
+        alpha = -inf
+        beta = inf
         for i, m in enumerate(moves):
             self.board.perform_move(m, player=1)
-            move_values[i] = -negamax(self.board, depth=self.depth - 1, maximize=False, eval_fun=self.eval_fun)
+            move_values[i] = -negamax_ab(
+                self.board,
+                depth=self.depth - 1,
+                maximize=False,
+                alpha=-beta,
+                beta=-alpha,
+                eval_fun=self.eval_fun
+            )
             self.board.undo_move(player=1)
+            alpha = max(alpha, move_values[i])
             print(f'\t Root {as_move(m)} yielded score {move_values[i]}')
 
         # select best move
-        best_value = max(move_values)
-        if math.isinf(best_value):
+        if math.isinf(alpha):
             best_move = next(moves[i] for i in range(len(move_values)) if math.isinf(move_values[i]))
         else:
-            best_moves = [moves[i] for i in range(len(move_values)) if abs(move_values[i] - best_value) < .001]
+            best_moves = [moves[i] for i in range(len(move_values)) if abs(move_values[i] - alpha) < .001]
             if len(best_moves) > 1:
                 print(f'Choosing randomly between {len(best_moves)} moves with same score.')
                 best_move = choice(best_moves)

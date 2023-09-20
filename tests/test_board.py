@@ -214,15 +214,15 @@ def test_undo_move_candy():
 
 def test_print():
     b = Board(3, 2)
-    assert str(b) == '\n+---+\n|   |\n|   |\n+---+'
+    assert str(b) == '\n+---+\n|···|\n|···|\n+---+'
     b.spawn(pos1=(1, 0), pos2=(2, 1))
-    assert str(b) == '\n+---+\n|  B|\n| A |\n+---+'
+    assert str(b) == '\n+---+\n|··B|\n|·A·|\n+---+'
 
     b.player1_length = 2
     b.player2_length = 2
     b.perform_move(RIGHT, player=1)
     b.perform_move(LEFT, player=2)
-    assert str(b) == '\n+---+\n| Bb|\n| aA|\n+---+'
+    assert str(b) == '\n+---+\n|·Bb|\n|·aA|\n+---+'
 
 
 def test_move_generation():
@@ -271,7 +271,7 @@ def test_set_state():
 
     b2 = Board(2, 2)
     b2.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
+        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1]])),
         candies=[]
     )
@@ -285,8 +285,8 @@ def test_set_state():
 
     b3 = Board(2, 2)
     b3.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0], [0, 1]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1], [1, 0]])),
+        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 0], [1, 1]])),
         candies=[]
     )
     assert b3.player1_head == 2

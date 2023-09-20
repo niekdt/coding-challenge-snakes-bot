@@ -25,6 +25,7 @@ class Board:
         self.width: int = width
         self.height: int = height
         self.grid: ndarray[int] = np.zeros([width, height], dtype=int)
+        self.candies: list[tuple[int, int]] = list()
         self.candy_mask: ndarray[bool] = np.full(self.grid.shape, fill_value=False, dtype=bool)
         self.player1_pos: ndarray = np.array((-2, -2), dtype=int)
         self.player2_pos: ndarray = np.array((-2, -2), dtype=int)
@@ -57,9 +58,11 @@ class Board:
         pass
 
     def spawn_candy(self, pos: ndarray) -> None:
+        self.candies.append(tuple(pos))
         self.candy_mask[pos[0], pos[1]] = True
 
     def remove_candy(self, pos: ndarray) -> None:
+        self.candies.remove(tuple(pos))
         self.candy_mask[pos[0], pos[1]] = False
 
     def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
@@ -84,15 +87,17 @@ class Board:
         # snake positions are in reverse order (head of the list is tail of the snake)
         # tail = 1, head = p1_head
         for i, pos in enumerate(snake1.positions):
-            self.grid[pos[0], pos[1]] = i + 1
+            #self.grid[pos[0], pos[1]] = i + 1
+            self.grid[pos[0], pos[1]] = self.player1_head - i
 
         # tail = -1, head = p2_head
         for i, pos in enumerate(snake2.positions):
-            self.grid[pos[0], pos[1]] = -i - 1
+            #self.grid[pos[0], pos[1]] = -i - 1
+            self.grid[pos[0], pos[1]] = self.player2_head + i
 
         # set player positions to the head of the snake (the tail of the list)
-        np.copyto(self.player1_pos, snake1.positions[-1], casting='no')
-        np.copyto(self.player2_pos, snake2.positions[-1], casting='no')
+        np.copyto(self.player1_pos, snake1.positions[0], casting='no')
+        np.copyto(self.player2_pos, snake2.positions[0], casting='no')
 
         # spawn candies
         for pos in candies:
@@ -115,6 +120,12 @@ class Board:
     def is_empty_pos(self, pos: ndarray) -> bool:
         return self.get_empty_mask()[pos[0], pos[1]]
 
+    def get_player_pos(self, player: int) -> ndarray[int]:
+        return self.player1_pos if player == 1 else self.player2_pos
+
+    def get_candies(self) -> list[tuple[int, int]]:
+        return self.candies
+
     # TODO optimize
     def get_empty_mask(self) -> ndarray[bool]:
         return (self.get_player1_mask() == False) & (self.get_player2_mask() == False)
@@ -135,7 +146,7 @@ class Board:
         return self.candy_mask.view()
 
     def has_candy(self) -> bool:
-        return np.any(self.candy_mask)
+        return bool(self.candies)
 
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
@@ -145,13 +156,11 @@ class Board:
             (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
             (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
 
-    def get_valid_moves(self, player: int) -> List[ndarray]:
+    def get_valid_moves(self, player: int) -> list[ndarray]:
         if player == 1:
             pos = self.player1_pos
         else:
             pos = self.player2_pos
-
-        assert self.is_valid_pos(pos), 'invalid position tuple for player {player}: {pos}'
 
         can_move_left = pos[0] > 0 and self.is_empty_pos(pos + LEFT)
         can_move_right = pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)

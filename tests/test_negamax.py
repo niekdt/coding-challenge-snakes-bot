@@ -4,13 +4,14 @@ import time
 
 import numpy as np
 
-from ..bots.negamax import MinimaxBot
+from snakes.bots.niekdt.eval import length, death, candy_dist
+from ..bots.negamax import NegamaxBot
 from snakes.constants import Move
 from snakes.snake import Snake
 
 
 def test_forced_move():
-    bot = MinimaxBot(id=0, grid_size=(2, 2), depth=1)
+    bot = NegamaxBot(id=0, grid_size=(2, 2), depth=1, eval_fun=death.evaluate)
 
     move = bot.determine_next_move(
         snake=Snake(id=0, positions=np.array([[0, 1]])),
@@ -21,7 +22,7 @@ def test_forced_move():
 
 
 def test_winning_move():
-    bot = MinimaxBot(id=0, grid_size=(3, 3), depth=1)
+    bot = NegamaxBot(id=0, grid_size=(3, 3), depth=1, eval_fun=death.evaluate)
 
     move = bot.determine_next_move(
         snake=Snake(id=0, positions=np.array([[0, 0], [0, 1], [1, 1]])),
@@ -32,7 +33,7 @@ def test_winning_move():
 
 
 def test_computation_time():
-    bot = MinimaxBot(id=0, grid_size=(16, 16), depth=7)
+    bot = NegamaxBot(id=0, grid_size=(16, 16), depth=7, eval_fun=candy_dist.evaluate)
 
     start = time.time()
     with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
@@ -42,4 +43,4 @@ def test_computation_time():
             candies=[]
         )
     print(f'\nSearch took {(time.time() - start) * 1000:.2f} ms')
-    assert (time.time() - start) < .15
+    assert (time.time() - start) < .1

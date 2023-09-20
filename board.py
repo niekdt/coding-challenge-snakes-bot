@@ -295,7 +295,7 @@ class Board:
             replace(']', ''). \
             replace("'", ''). \
             replace(' ', ''). \
-            replace('_', ' ')
+            replace('_', '·')
 
     def __repr__(self) -> str:
         # TODO add turn info

@@ -2,7 +2,7 @@ from math import isinf, inf
 from random import choice
 from typing import Dict
 
-from snakes.constants import Move
+from ....constants import Move
 
 
 def best_move(move_values: Dict[Move, float], tolerance: float = .001) -> Move:

@@ -1,9 +1,8 @@
 from math import inf
 from typing import Dict
 
-from snakes.constants import Move
-
 from ..board import Board
+from ....constants import Move
 
 
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:

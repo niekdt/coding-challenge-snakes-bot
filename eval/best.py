@@ -1,6 +1,6 @@
 from math import inf
 
-from snakes.bots.niekdt.board import distance, Board
+from ..board import distance, Board
 
 
 def evaluate(board: Board, player: int) -> float:

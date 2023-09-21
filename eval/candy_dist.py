@@ -1,4 +1,4 @@
-from snakes.bots.niekdt.board import distance
+from ..board import distance
 
 
 def evaluate(board, player) -> float:

@@ -42,7 +42,10 @@ def test_winning_move(depth, search):
     ref_board = board.copy()
 
     moves = search(board, depth=1, eval_fun=death.evaluate)
-    assert moves == {Move.RIGHT: 0, Move.UP: inf, Move.DOWN: 0}
+    if search == negamax_moves:
+        assert moves == {Move.RIGHT: 0, Move.UP: inf, Move.DOWN: 0}
+    else:
+        assert moves == {Move.UP: inf}
 
     assert board == ref_board
 
@@ -78,7 +81,8 @@ def test_goto_candy_far(depth, search):
     print(moves)
 
     assert best_move(moves) in [Move.LEFT, Move.UP]
-    assert moves[Move.LEFT] == moves[Move.UP]
+    if search == negamax_moves:
+        assert moves[Move.LEFT] == moves[Move.UP]
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10])

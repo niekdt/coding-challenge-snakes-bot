@@ -34,22 +34,25 @@ class NegamaxAbBot(Bot):
         return 'niekdt'
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
-        print('=' * 80)
         start = time.time()
         self.board.set_state(snake1=snake, snake2=other_snakes[0], candies=candies)
-        print(snake)
-        print(other_snakes[0])
-        print(candies)
-        print('Initial game state:', end='')
-        print(self.board)
+        if __debug__:
+            print('=' * 80)
+            print(snake)
+            print(other_snakes[0])
+            print(candies)
+            print('Initial game state:', end='')
+            print(self.board)
 
         move_values = negamax_ab_moves(self.board, depth=self.depth, eval_fun=self.eval_fun)
 
-        print('Root move evaluations:')
-        print(move_values)
-        if get_best_moves_count(move_values) == 3:
-            print('Indecisive!!')
+        if __debug__:
+            print('Root move evaluations:')
+            print(move_values)
+            if get_best_moves_count(move_values) == 3:
+                print('Indecisive!!')
         move = best_move(move_values)
 
-        print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
+        if __debug__:
+            print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
         return move

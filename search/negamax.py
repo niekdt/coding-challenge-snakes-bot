@@ -1,8 +1,8 @@
 from math import inf
 from typing import Dict
 
+from snakes.constants import Move
 from ..board import Board
-from ....constants import Move
 
 
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
@@ -38,7 +38,6 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
 
 
 def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
-    print(f'D{depth} search')
     moves = board.get_valid_moves(player=1)
     assert len(moves) > 0, 'no possible moves!'
 
@@ -47,7 +46,8 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move,
     best_move = Move.UP
     best_value = -inf
     for move in moves:
-        print(f'== Evaluate {move} for alpha = {alpha} ==')
+        if __debug__:
+            print(f'== Evaluate {move} for alpha = {alpha} ==')
         board.perform_move(move, player=1)
         value = -negamax_ab(
             board,
@@ -57,7 +57,8 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move,
             beta=-alpha,
             eval_fun=eval_fun
         )
-        print(f'Got value {value}')
+        if __debug__:
+            print(f'\tGot value {value}')
         board.undo_move(player=1)
         if value > best_value:
             best_move = move
@@ -78,7 +79,7 @@ def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float,
     :param eval_fun: Leaf evaluation function
     :return: Game position score
     """
-    indent = ' ' * (16 - depth)
+    # indent = ' ' * (16 - depth)
     # print(f'{indent}D{depth:02d} P{player:2d}: entering')
     if depth == 0:
         s = eval_fun(board, player=player)

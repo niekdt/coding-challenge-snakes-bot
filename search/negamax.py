@@ -1,10 +1,12 @@
 from math import inf
+from typing import Dict
 
 from snakes.constants import Move
+
 from ..board import Board
 
 
-def negamax_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
+def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
     moves = board.get_valid_moves(player=1)
     assert len(moves) > 0, 'no possible moves!'
 
@@ -36,7 +38,7 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
     return best_value
 
 
-def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
+def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
     print(f'D{depth} search')
     moves = board.get_valid_moves(player=1)
     assert len(moves) > 0, 'no possible moves!'

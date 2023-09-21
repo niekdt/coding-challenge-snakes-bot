@@ -3,21 +3,21 @@ from typing import List
 
 import numpy as np
 
+from ..board import Board
 from ..eval import death
-from ....snake import Snake
+from ..search.choose import best_move
+from ..search.negamax import negamax_moves
 from ....bot import Bot
 from ....constants import Move
-from ..board import Board
-from ..search.negamax import negamax_moves
-from ..search.choose import best_move
+from ....snake import Snake
 
 
 class NegamaxBot(Bot):
     def __init__(
-        self, id: int,
-        grid_size: tuple[int, int],
-        depth: int = 3,
-        eval_fun: callable = death.evaluate
+            self, id: int,
+            grid_size: Tuple[int, int],
+            depth: int = 3,
+            eval_fun: callable = death.evaluate
     ) -> None:
         super().__init__(id, grid_size)
         assert depth >= 1

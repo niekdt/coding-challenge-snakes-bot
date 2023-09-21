@@ -1,13 +1,15 @@
 from collections import deque
 from copy import deepcopy
 from itertools import compress
-from typing import Self, List, Deque
+from typing import List, Deque, TypeVar, Tuple
 
 import numpy as np
 from numpy import ndarray
 
 from ...constants import LEFT, RIGHT, UP, DOWN, Move, MOVE_VALUE_TO_DIRECTION
 from ...snake import Snake
+
+Self = TypeVar("Self", bound="Board")
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
 
@@ -24,10 +26,10 @@ class Board:
 
         self.width: int = width
         self.height: int = height
-        self.center: tuple[int, int] = (int(width / 2), int(height / 2))
-        self.grid: ndarray[int] = np.zeros([width, height], dtype=int)
-        self.candies: list[tuple[int, int]] = list()
-        self.candy_mask: ndarray[bool] = np.full(self.grid.shape, fill_value=False, dtype=bool)
+        self.center: Tuple[int, int] = (int(width / 2), int(height / 2))
+        self.grid: ndarray = np.zeros([width, height], dtype=int)
+        self.candies: List[Tuple[int, int]] = list()
+        self.candy_mask: ndarray = np.full(self.grid.shape, fill_value=False, dtype=bool)
         self.player1_pos: ndarray = np.array((-2, -2), dtype=int)
         self.player2_pos: ndarray = np.array((-2, -2), dtype=int)
         self.player1_head: int = 0
@@ -35,11 +37,11 @@ class Board:
         self.player1_length: int = 0
         self.player2_length: int = 0
         self.last_player = 1
-        self.move_pos_stack: Deque[tuple] = deque(maxlen=32)
+        self.move_pos_stack: Deque[Tuple] = deque(maxlen=32)
         self.move_head_stack: Deque[int] = deque(maxlen=32)
         self.move_candy_stack: Deque[bool] = deque(maxlen=32)
 
-    def spawn(self, pos1: tuple[int, int], pos2: tuple[int, int]) -> None:
+    def spawn(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> None:
         """Spawn snakes of length 1 at the given positions. Merely for testing purposes."""
         self.set_state(
             snake1=Snake(id=0, positions=np.array([pos1])),
@@ -92,7 +94,7 @@ class Board:
         self.candy_mask[pos[0], pos[1]] = False
 
     @property
-    def shape(self) -> tuple[int, int]:
+    def shape(self) -> Tuple[int, int]:
         return self.width, self.height
 
     def get_free_space(self) -> int:
@@ -109,31 +111,31 @@ class Board:
             self.grid[pos[0], pos[1]] <= \
             self.player1_head - self.player1_length
 
-    def get_player_pos(self, player: int) -> ndarray[int]:
+    def get_player_pos(self, player: int) -> ndarray:
         return self.player1_pos if player == 1 else self.player2_pos
 
-    def get_candies(self) -> list[tuple[int, int]]:
+    def get_candies(self) -> List[Tuple[int, int]]:
         return self.candies.copy()
 
-    def get_empty_mask(self) -> ndarray[bool]:
+    def get_empty_mask(self) -> ndarray:
         return np.logical_and(
             self.player2_head + self.player2_length <= self.grid,
             self.grid <= self.player1_head - self.player1_length
         )
 
-    def get_player1_mask(self) -> ndarray[bool]:
+    def get_player1_mask(self) -> ndarray:
         return self.grid > self.player1_head - self.player1_length
 
-    def get_player2_mask(self) -> ndarray[bool]:
+    def get_player2_mask(self) -> ndarray:
         return self.grid < self.player2_head + self.player2_length
 
-    def get_player_mask(self, player: int) -> ndarray[bool]:
+    def get_player_mask(self, player: int) -> ndarray:
         if player == 1:
             return self.get_player1_mask()
         else:
             return self.get_player2_mask()
 
-    def get_candy_mask(self) -> ndarray[bool]:
+    def get_candy_mask(self) -> ndarray:
         return self.candy_mask.view()
 
     def has_candy(self) -> bool:
@@ -147,7 +149,7 @@ class Board:
             (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
             (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
 
-    def get_valid_moves(self, player: int) -> list[Move]:
+    def get_valid_moves(self, player: int) -> List[Move]:
         if player == 1:
             pos = self.player1_pos
         else:

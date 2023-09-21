@@ -37,6 +37,7 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
 
 
 def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move, float]:
+    print(f'D{depth} search')
     moves = board.get_valid_moves(player=1)
     assert len(moves) > 0, 'no possible moves!'
 
@@ -44,6 +45,7 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
     beta = inf
     move_values = dict()
     for move in moves:
+        print(f'== Evaluate {move} for alpha = {alpha} ==')
         board.perform_move(move, player=1)
         value = -negamax_ab(
             board,
@@ -53,6 +55,7 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
             beta=-alpha,
             eval_fun=eval_fun
         )
+        print(f'Got value {value}')
         board.undo_move(player=1)
         move_values[move] = value
         alpha = max(alpha, value)
@@ -61,25 +64,38 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
 
 
 def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:
+    """
+
+    :param board: The game state
+    :param depth: Remaining depth to search
+    :param player: Current player
+    :param alpha: Guaranteed lower bound
+    :param beta: Guaranteed upper bound
+    :param eval_fun: Leaf evaluation function
+    :return: Game position score
+    """
+    indent = ' ' * (16 - depth)
+    # print(f'{indent}D{depth:02d} P{player:2d}: entering')
     if depth == 0:
         s = eval_fun(board, player=player)
         # print(board)
-        # print(f'Score: {s}')
-        return s
+        # print(f'{indent}D{0:02d} P{player:2d}: leaf node score = {s}')
+        return int(s)
 
     moves = board.get_valid_moves(player=player)
     if len(moves) == 0:  # current player is stuck
+        raise Exception('no')
         return -inf  # TODO compute game score, as we may still have won if the other player died first
 
     best_value = -inf
     for move in moves:
         board.perform_move(move, player=player)
-        best_value = max(
-            best_value,
-            -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
-        )
+        value = -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
         board.undo_move(player=player)
+        # print(f'{indent}D{depth:02d} P{player:2d}: got {value} for {move}')
+        best_value = max(best_value, value)
         alpha = max(alpha, best_value)
         if alpha >= beta:
-            break
+            # print(f'{indent}D{depth:02d} P{player:2d}: prune with value {best_value} because alpha >= beta ({alpha} >= {beta})')
+            return best_value
     return best_value

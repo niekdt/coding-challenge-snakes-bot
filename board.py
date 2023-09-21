@@ -24,6 +24,7 @@ class Board:
 
         self.width: int = width
         self.height: int = height
+        self.center: tuple[int, int] = (int(width / 2), int(height / 2))
         self.grid: ndarray[int] = np.zeros([width, height], dtype=int)
         self.candies: list[tuple[int, int]] = list()
         self.candy_mask: ndarray[bool] = np.full(self.grid.shape, fill_value=False, dtype=bool)
@@ -45,14 +46,6 @@ class Board:
             snake2=Snake(id=1, positions=np.array([pos2])),
             candies=[]
         )
-
-    def spawn_candy(self, pos: ndarray) -> None:
-        self.candies.append(tuple(pos))
-        self.candy_mask[pos[0], pos[1]] = True
-
-    def remove_candy(self, pos: ndarray) -> None:
-        self.candies.remove(tuple(pos))
-        self.candy_mask[pos[0], pos[1]] = False
 
     def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
         self.last_player = -1  # set P2 to have moved last
@@ -87,7 +80,16 @@ class Board:
         # spawn candies
         for pos in candies:
             self.spawn_candy(pos)
-        pass
+
+    def spawn_candy(self, pos: ndarray) -> None:
+        pos_tuple = tuple(pos)
+        assert pos_tuple not in self.candies
+        self.candies.append(pos_tuple)
+        self.candy_mask[pos[0], pos[1]] = True
+
+    def remove_candy(self, pos: ndarray) -> None:
+        self.candies.remove(tuple(pos))
+        self.candy_mask[pos[0], pos[1]] = False
 
     @property
     def shape(self) -> tuple[int, int]:
@@ -111,7 +113,7 @@ class Board:
         return self.player1_pos if player == 1 else self.player2_pos
 
     def get_candies(self) -> list[tuple[int, int]]:
-        return self.candies
+        return self.candies.copy()
 
     def get_empty_mask(self) -> ndarray[bool]:
         return np.logical_and(
@@ -135,7 +137,7 @@ class Board:
         return self.candy_mask.view()
 
     def has_candy(self) -> bool:
-        return bool(self.candies)
+        return len(self.candies) > 0
 
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
@@ -196,10 +198,9 @@ class Board:
                 self.remove_candy(self.player2_pos)
 
         self.last_player = player
-        pass
 
     def undo_move(self, player: int) -> None:
-        assert player == self.last_player, f'Cannot undo move of P{player_num(player)} because the other moved last'
+        assert player == self.last_player, 'Last move was performed by the other player'
 
         ate_candy = self.move_candy_stack.pop()
 
@@ -220,7 +221,6 @@ class Board:
             self.player2_head += 1
 
         self.last_player = -self.last_player
-        pass
 
     def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
@@ -236,7 +236,6 @@ class Board:
         self.move_pos_stack = board.move_pos_stack.copy()
         self.move_head_stack = board.move_head_stack.copy()
         self.move_candy_stack = board.move_candy_stack.copy()
-        pass
 
     def copy(self) -> Self:
         return deepcopy(self)
@@ -245,13 +244,21 @@ class Board:
         return self.width * self.height
 
     def __eq__(self, other) -> bool:
-        return self.player1_head == other.player1_head and \
+        return self.width == other.width and \
+            self.height == other.height and \
+            self.player1_head == other.player1_head and \
             self.player2_head == other.player2_head and \
             self.player1_length == other.player1_length and \
             self.player2_length == other.player2_length and \
+            self.last_player == other.last_player and \
+            set(self.candies) == set(other.candies) and \
             np.array_equal(self.player1_pos, other.player1_pos) and \
             np.array_equal(self.player2_pos, other.player2_pos) and \
-            np.array_equal(self.grid, other.grid)
+            np.array_equal(self.grid, other.grid) and \
+            np.array_equal(self.candy_mask, other.candy_mask) and \
+            self.move_pos_stack == other.move_pos_stack and \
+            self.move_head_stack == other.move_head_stack and \
+            self.move_candy_stack == other.move_candy_stack
 
     def __str__(self) -> str:
         str_grid = np.full(self.shape, fill_value='_', dtype=str)

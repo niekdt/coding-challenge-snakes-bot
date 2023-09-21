@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from snakes.bots.niekdt.board import Board
-from snakes.bots.niekdt.eval import length, death, candy_dist, best
-from snakes.bots.niekdt.search.choose import best_move, has_single_best_move
+from snakes.bots.niekdt.eval import death, candy_dist, best
+from snakes.bots.niekdt.search.choose import best_move, has_single_best_move, get_best_moves_count
 from snakes.bots.niekdt.search.negamax import negamax_moves, negamax_ab_moves
 from snakes.constants import Move
 from snakes.snake import Snake
@@ -64,7 +64,7 @@ def test_goto_candy(depth, search, size):
     assert best_move(moves) == Move.RIGHT
 
 
-@pytest.mark.parametrize('depth', [1, 6, 7])
+@pytest.mark.parametrize('depth', [1, 6, 7, 10])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
 def test_goto_candy_far(depth, search):
     board = Board(16, 16)
@@ -81,7 +81,7 @@ def test_goto_candy_far(depth, search):
     assert moves[Move.LEFT] == moves[Move.UP]
 
 
-@pytest.mark.parametrize('depth', [1, 6, 7])
+@pytest.mark.parametrize('depth', [1, 6, 7, 10])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
 def test_goto_candy_near(depth, search):
     board = Board(16, 16)
@@ -91,11 +91,39 @@ def test_goto_candy_near(depth, search):
         candies=[np.array((6, 14)), np.array((7, 14)), np.array((6, 9))]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
     print(moves)
 
     assert best_move(moves) == Move.RIGHT
     assert has_single_best_move(moves)
+
+
+@pytest.mark.parametrize('depth', [1, 6, 7, 10])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+def test_goto_candy_near2(depth, search):
+    if depth > 10 and search == negamax_moves:
+        pytest.skip()
+
+    if not (depth >= 10 and search == negamax_ab_moves):
+        pytest.skip()
+
+    board = Board(16, 9)
+    board.set_state(
+        snake1=Snake(id=1, positions=np.array([[3, 1], [3, 0], [4, 0]])),
+        snake2=Snake(id=0, positions=np.array([[14, 6], [14, 5]])),
+        candies=[np.array((2, 2)), np.array((14, 8))]
+    )
+    print(board)
+
+    moves_ref = negamax_moves(board, depth=depth, eval_fun=best.evaluate)
+    print(f'Ref moves: {moves_ref}')
+    moves = search(board, depth=depth, eval_fun=best.evaluate)
+
+    assert moves == moves_ref
+    print('>' * 80)
+    print(moves)
+
+    assert get_best_moves_count(moves) < 3
 
 
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])

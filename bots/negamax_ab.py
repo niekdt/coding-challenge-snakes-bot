@@ -5,7 +5,7 @@ import numpy as np
 
 from ..board import Board
 from ..eval import death
-from ..search.choose import best_move
+from ..search.choose import best_move, get_best_moves_count
 from ..search.negamax import negamax_ab_moves
 from ....bot import Bot
 from ....constants import Move
@@ -47,6 +47,8 @@ class NegamaxAbBot(Bot):
 
         print('Root move evaluations:')
         print(move_values)
+        if get_best_moves_count(move_values) == 3:
+            print('Indecisive!!')
         move = best_move(move_values)
 
         print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -10,7 +10,7 @@ from ...snake import Snake
 
 
 class Snek(Bot):
-    def __init__(self, id: int, grid_size: tuple[int, int]) -> None:
+    def __init__(self, id: int, grid_size: Tuple[int, int]) -> None:
         super().__init__(id, grid_size)
         self.bot = NegamaxAbBot(id=id, grid_size=grid_size, depth=12, eval_fun=best.evaluate)
 

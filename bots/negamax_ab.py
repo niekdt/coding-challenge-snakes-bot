@@ -1,5 +1,5 @@
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -14,10 +14,10 @@ from ....snake import Snake
 
 class NegamaxAbBot(Bot):
     def __init__(
-        self, id: int,
-        grid_size: tuple[int, int],
-        depth: int = 3,
-        eval_fun: callable = death.evaluate
+            self, id: int,
+            grid_size: Tuple[int, int],
+            depth: int = 3,
+            eval_fun: callable = death.evaluate
     ) -> None:
         super().__init__(id, grid_size)
         assert depth >= 1

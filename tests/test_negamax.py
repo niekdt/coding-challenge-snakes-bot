@@ -6,12 +6,12 @@ from math import inf
 import numpy as np
 import pytest
 
-from snakes.bots.niekdt.board import Board
-from snakes.bots.niekdt.eval import death, candy_dist, best
-from snakes.bots.niekdt.search.choose import best_move, has_single_best_move
-from snakes.bots.niekdt.search.negamax import negamax_moves, negamax_ab_moves
-from snakes.constants import Move
-from snakes.snake import Snake
+from ..board import Board
+from ..eval import death, candy_dist, best
+from ..search.choose import best_move, has_single_best_move
+from ..search.negamax import negamax_moves, negamax_ab_moves
+from ....constants import Move
+from ....snake import Snake
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3])
@@ -132,4 +132,3 @@ def test_computation_time(search):
         moves = search(board, depth=depth, eval_fun=eval_fun)
         move = best_move(moves)
     assert (time.time() - start) < .23
-

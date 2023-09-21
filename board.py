@@ -1,6 +1,6 @@
 from collections import deque
 from copy import deepcopy
-from itertools import compress
+from itertools import compress, chain, combinations
 from typing import List, Deque, TypeVar, Tuple
 
 import numpy as np
@@ -13,8 +13,14 @@ Self = TypeVar("Self", bound="Board")
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
 
-
 # TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
+
+MOVE_COMBINATIONS = list(chain.from_iterable(combinations(ALL_MOVES, r) for r in range(0, len(ALL_MOVES))))
+# MOVE_COMBINATIONS = [tuple(compress(ALL_MOVES, [x & 1, x & 2, x & 4, x & 8])) for x in range(0, 16)])]
+
+def get_moves(left: bool, right: bool, up: bool, down: bool) -> Tuple[int, int]:
+    return MOVE_COMBINATIONS[left + (right << 1) + (up << 2) + (down << 3)]
+
 
 class Board:
     _target_pos = np.array((0, 0), dtype=int)

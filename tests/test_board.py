@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from ..board import Board, as_move
+from ..board import Board, as_move, get_moves
 from ....constants import Move, MOVE_VALUE_TO_DIRECTION, MOVES
 from ....snake import Snake
 
@@ -120,7 +120,7 @@ def test_free_space():
     assert b.get_free_space() == 8 * 6 - 2
 
     b.spawn_candy(np.array((0, 0)))
-    assert b.get_free_space() == 8 * 6 - 2 # should not affect free space
+    assert b.get_free_space() == 8 * 6 - 2  # should not affect free space
 
 
 def test_perform_move():
@@ -331,3 +331,18 @@ def test_set_state_candy():
 @pytest.mark.parametrize('move', MOVES)
 def test_as_move(move):
     assert as_move(MOVE_VALUE_TO_DIRECTION[move]) == move
+
+
+@pytest.mark.parametrize('left', [None, Move.LEFT])
+@pytest.mark.parametrize('right', [None, Move.RIGHT])
+@pytest.mark.parametrize('up', [None, Move.UP])
+@pytest.mark.parametrize('down', [None, Move.DOWN])
+def test_get_moves(left, right, up, down):
+    moves = get_moves(
+        left is not None,
+        right is not None,
+        up is not None,
+        down is not None
+    )
+    expected_moves = tuple([x for x in [left, right] if x is not None])
+    assert set(moves) == set(expected_moves)

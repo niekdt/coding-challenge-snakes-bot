@@ -43,7 +43,8 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
 
     alpha = -inf
     beta = inf
-    move_values = dict()
+    best_move = Move.UP
+    best_value = -inf
     for move in moves:
         print(f'== Evaluate {move} for alpha = {alpha} ==')
         board.perform_move(move, player=1)
@@ -57,15 +58,17 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> dict[Move,
         )
         print(f'Got value {value}')
         board.undo_move(player=1)
-        move_values[move] = value
+        if value > best_value:
+            best_move = move
+            best_value = value
         alpha = max(alpha, value)
 
-    return move_values
+    return dict([(best_move, best_value)])
 
 
 def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:
     """
-
+    Negamax with alpha-beta pruning
     :param board: The game state
     :param depth: Remaining depth to search
     :param player: Current player
@@ -80,11 +83,10 @@ def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float,
         s = eval_fun(board, player=player)
         # print(board)
         # print(f'{indent}D{0:02d} P{player:2d}: leaf node score = {s}')
-        return int(s)
+        return s
 
     moves = board.get_valid_moves(player=player)
     if len(moves) == 0:  # current player is stuck
-        raise Exception('no')
         return -inf  # TODO compute game score, as we may still have won if the other player died first
 
     best_value = -inf

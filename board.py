@@ -14,6 +14,9 @@ Pos = Tuple[int, int]
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
 POS_OFFSET = np.array((1, 1))
+# for np access
+ROW_OFFSET = (- 1, 1, 0, 0)
+COL_OFFSET = (0, 0, 1, -1)
 
 MOVE_TO_DIRECTION = {
     Move.UP: (0, 1),
@@ -27,6 +30,7 @@ class Board:
     _hash: int = 0
     _approx_hash: int = 0
     _wall_hash: int = 0
+    _hashes = [0, 0, 0]
 
     def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
@@ -127,6 +131,9 @@ class Board:
             self.grid[pos] <= \
             self.player1_head - self.player1_length
 
+    def is_empty(self, value: int) -> bool:
+        return self.player2_head + self.player2_length <= value <= self.player1_head - self.player1_length
+
     def get_player_pos(self, player: int) -> Pos:
         return self.player1_pos if player == 1 else self.player2_pos
 
@@ -158,22 +165,21 @@ class Board:
         return len(self.candies) > 0
 
     def can_move(self, player: int) -> bool:
-        pos = self.player1_pos if player == 1 else self.player2_pos
+        x, y = self.player1_pos if player == 1 else self.player2_pos
 
-        return self.is_empty_pos((pos[0] - 1, pos[1])) or \
-            self.is_empty_pos((pos[0] + 1, pos[1])) or \
-            self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1)) or \
-            self.is_empty_pos((pos[0], pos[1] - 1))
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+
+        return lb <= self.grid[x - 1, y] <= ub or \
+            lb <= self.grid[x + 1, y] <= ub or \
+            lb <= self.grid[x, y + 1] <= ub or \
+            lb <= self.grid[x, y - 1] <= ub
 
     def can_do_move(self, move: Move, pos: Pos) -> bool:
-        if move == Move.LEFT:
-            return self.is_empty_pos((pos[0] - 1, pos[1]))
-        elif move == Move.RIGHT:
-            return self.is_empty_pos((pos[0] + 1, pos[1]))
-        elif move == Move.UP:
-            return self.is_empty_pos((pos[0], pos[1] + 1))
-        else:
-            return self.is_empty_pos((pos[0], pos[1] - 1))
+        move_dir = MOVE_TO_DIRECTION[move]
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+        return lb <= self.grid[pos[0] + move_dir[0], pos[1] + move_dir[1]] <= ub
 
     def can_player1_do_move(self, move: Move) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -187,20 +193,23 @@ class Board:
         else:
             return filter(self.can_player2_do_move, order)
 
-    def get_valid_moves(self, player: int) -> Tuple[Move]:
+    def get_valid_moves(self, player: int) -> List[Move]:
         if player == 1:
-            pos = self.player1_pos
+            x, y = self.player1_pos
         else:
-            pos = self.player2_pos
+            x, y = self.player2_pos
 
-        can_moves = [
-            self.is_empty_pos((pos[0] - 1, pos[1])),  # left
-            self.is_empty_pos((pos[0] + 1, pos[1])),  # right
-            self.is_empty_pos((pos[0], pos[1] + 1)),  # up
-            self.is_empty_pos((pos[0], pos[1] - 1))  # down
-        ]
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
 
-        return tuple(compress(ALL_MOVES, can_moves))
+        can_moves = (
+            lb <= self.grid[x - 1, y] <= ub,
+            lb <= self.grid[x + 1, y] <= ub,
+            lb <= self.grid[x, y + 1] <= ub,
+            lb <= self.grid[x, y - 1] <= ub
+        )
+
+        return list(compress(ALL_MOVES, can_moves))  # faster than tuple() AND list comprehension
 
     def get_valid_moves_ordered(self, player: int, order: Tuple[Move] = ALL_MOVES) -> List[Move]:
         moves = self.get_valid_moves(player=player)

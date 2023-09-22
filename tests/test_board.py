@@ -344,5 +344,5 @@ def test_get_moves(left, right, up, down):
         up is not None,
         down is not None
     )
-    expected_moves = tuple([x for x in [left, right] if x is not None])
+    expected_moves = tuple([x for x in [left, right, up, down] if x is not None])
     assert set(moves) == set(expected_moves)

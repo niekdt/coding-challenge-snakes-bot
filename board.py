@@ -1,6 +1,6 @@
 from collections import deque
 from copy import deepcopy
-from itertools import compress, chain, combinations
+from itertools import compress
 from typing import List, Deque, TypeVar, Tuple
 
 import numpy as np
@@ -12,13 +12,10 @@ from ...snake import Snake
 Self = TypeVar("Self", bound="Board")
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
+MOVE_COMBINATIONS = [tuple(compress(ALL_MOVES, [x & 1 > 0, x & 2 > 0, x & 4 > 0, x & 8 > 0])) for x in range(0, 16)]
 
-# TODO generate list permutations for all possible move sets. The get_valid_moves() function can then select one.
 
-MOVE_COMBINATIONS = list(chain.from_iterable(combinations(ALL_MOVES, r) for r in range(0, len(ALL_MOVES))))
-# MOVE_COMBINATIONS = [tuple(compress(ALL_MOVES, [x & 1, x & 2, x & 4, x & 8])) for x in range(0, 16)])]
-
-def get_moves(left: bool, right: bool, up: bool, down: bool) -> Tuple[int, int]:
+def get_moves(left: bool, right: bool, up: bool, down: bool) -> Tuple[Move]:
     return MOVE_COMBINATIONS[left + (right << 1) + (up << 2) + (down << 3)]
 
 
@@ -155,7 +152,7 @@ class Board:
             (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
             (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
 
-    def get_valid_moves(self, player: int) -> List[Move]:
+    def get_valid_moves(self, player: int) -> Tuple[Move]:
         if player == 1:
             pos = self.player1_pos
         else:
@@ -166,7 +163,8 @@ class Board:
         can_move_up = pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)
         can_move_down = pos[1] > 0 and self.is_empty_pos(pos + DOWN)
 
-        return list(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
+        return tuple(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
+        # return get_moves(can_move_left, can_move_right, can_move_up, can_move_down)
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: Move, player: int) -> None:

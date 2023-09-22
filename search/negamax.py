@@ -2,8 +2,9 @@ from math import inf
 from typing import Dict
 
 from snakes.constants import Move
-from ..board import Board
+from ..board import Board, ALL_MOVES
 
+MOVE_HISTORY: Dict = dict()
 
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
     # suicide
@@ -44,13 +45,19 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
     return best_value
 
 
-def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
+def negamax_ab_moves(
+        board: Board,
+        depth: int,
+        eval_fun: callable,
+        move_history: Dict = MOVE_HISTORY
+) -> Dict[Move, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    moves = board.get_valid_moves(player=1)
-    assert len(moves) > 0, 'no possible moves!'
+    board_hash = hash(board)
+    move_order = move_history.get(board_hash, ALL_MOVES)
+    moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
     alpha = -inf
     beta = inf
@@ -67,7 +74,8 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move,
             player=-1,
             alpha=-beta,
             beta=-alpha,
-            eval_fun=eval_fun
+            eval_fun=eval_fun,
+            move_history=move_history
         )
         if __debug__:
             print(f'\tGot value {value}')
@@ -80,46 +88,54 @@ def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move,
     return dict([(best_move, best_value)])
 
 
-def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float, eval_fun: callable) -> float:
-    """
-    Negamax with alpha-beta pruning
-    :param board: The game state
-    :param depth: Remaining depth to search
-    :param player: Current player
-    :param alpha: Guaranteed lower bound
-    :param beta: Guaranteed upper bound
-    :param eval_fun: Leaf evaluation function
-    :return: Game position score
-    """
-    # indent = ' ' * (16 - depth)
-    # print(f'{indent}D{depth:02d} P{player:2d}: entering')
+def negamax_ab(
+        board: Board,
+        depth: int,
+        player: int,
+        alpha: float,
+        beta: float,
+        eval_fun: callable,
+        move_history: Dict
+) -> float:
     if depth == 0:
-        s = eval_fun(board, player=player)
-        # print(board)
-        # print(f'{indent}D{0:02d} P{player:2d}: leaf node score = {s}')
-        return s
+        return eval_fun(board, player=player)
 
     # suicide
     if player == 1:
-        best_value = inf if board.player1_length > 2 * board.player2_length else -inf
+        alpha = inf if board.player1_length > 2 * board.player2_length else alpha
     else:
-        best_value = inf if board.player2_length > 2 * board.player1_length else -inf
+        alpha = inf if board.player2_length > 2 * board.player1_length else alpha
 
-    if best_value == inf:
-        return best_value
+    if alpha == inf:
+        return alpha
 
-    moves = board.iterate_valid_moves(player=player)
+    board_hash = board.approx_hash(force=True)
+    move_order = move_history.get(board_hash, ALL_MOVES)
+    moves = board.iterate_valid_moves(player=player, order=move_order)
 
-    best_value = -inf
+    move_scores = dict({
+        Move.LEFT: -inf,
+        Move.RIGHT: -inf,
+        Move.UP: -inf,
+        Move.DOWN: -inf
+    })
+
     for move in moves:
         board.perform_move(move, player=player)
-        value = -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
+        value = -negamax_ab(
+            board,
+            depth=depth - 1,
+            player=-player,
+            alpha=-beta,
+            beta=-alpha,
+            eval_fun=eval_fun,
+            move_history=move_history
+        )
+        move_scores[move] = value
         board.undo_move(player=player)
-        # print(f'{indent}D{depth:02d} P{player:2d}: got {value} for {move}')
-        best_value = max(best_value, value)
-        alpha = max(alpha, best_value)
+        alpha = max(alpha, value)
         if alpha >= beta:
-            # print(f'{indent}D{depth:02d} P{player:2d}: prune with value {best_value} because alpha >= beta ({alpha} >= {beta})')
-            return best_value
+            break
 
-    return best_value
+    move_history[board_hash] = sorted(ALL_MOVES, key=lambda m: move_scores[m], reverse=True)
+    return alpha

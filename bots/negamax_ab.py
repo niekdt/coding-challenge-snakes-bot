@@ -14,16 +14,17 @@ from ....snake import Snake
 
 class NegamaxAbBot(Bot):
     def __init__(
-            self, id: int,
-            grid_size: Tuple[int, int],
-            depth: int = 3,
-            eval_fun: callable = death.evaluate
+        self, id: int,
+        grid_size: Tuple[int, int],
+        depth: int = 3,
+        eval_fun: callable = death.evaluate
     ) -> None:
         super().__init__(id, grid_size)
         assert depth >= 1
         self.depth: int = depth
         self.eval_fun: callable = eval_fun
         self.board = Board(width=self.grid_size[0], height=self.grid_size[1])
+        self.move_history = dict()
 
     @property
     def name(self) -> str:
@@ -44,7 +45,12 @@ class NegamaxAbBot(Bot):
             print('Initial game state:', end='')
             print(self.board)
 
-        move_values = negamax_ab_moves(self.board, depth=self.depth, eval_fun=self.eval_fun)
+        move_values = negamax_ab_moves(
+            self.board,
+            depth=self.depth,
+            eval_fun=self.eval_fun,
+            move_history=self.move_history
+        )
 
         if __debug__:
             print('Root move evaluations:')

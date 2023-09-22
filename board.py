@@ -27,10 +27,8 @@ MOVE_TO_DIRECTION = {
 
 
 class Board:
-    _hash: int = 0
     _approx_hash: int = 0
     _wall_hash: int = 0
-    _hashes = [0, 0, 0]
 
     def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
@@ -252,7 +250,6 @@ class Board:
 
         self.last_player = player
         # invalidate cache
-        self._hash = 0
         self._approx_hash = 0
         self._wall_hash = 0
 
@@ -280,7 +277,6 @@ class Board:
         self.last_player = -self.last_player
 
         # invalidate cache
-        self._hash = 0
         self._approx_hash = 0
         self._wall_hash = 0
 
@@ -323,15 +319,12 @@ class Board:
             self.move_candy_stack == other.move_candy_stack
 
     def __hash__(self) -> int:
-        """Hash of the exact game state"""
-        if self._hash == 0:
-            self._hash = hash((_hash_np(self.grid), _hash_np(self.candy_mask), self.last_player))
+        """Hash of the exact game state. Not cached!"""
+        return hash((_hash_np(self.grid), _hash_np(self.candy_mask), self.last_player))
 
-        return self._hash
-
-    def approx_hash(self) -> int:
+    def approx_hash(self, force=False) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
-        if self._approx_hash == 0:
+        if self._approx_hash == 0 or force:
             self._approx_hash = hash((
                 _hash_np(self.get_empty_mask()),
                 _hash_np(self.candy_mask),
@@ -349,7 +342,7 @@ class Board:
 
     def invalidate(self) -> None:
         """Clears the cached state of the board. Forces hash recomputation on request"""
-        self._hash, self._approx_hash, self._wall_hash = 0, 0, 0
+        self._approx_hash, self._wall_hash = 0, 0
 
     def __str__(self) -> str:
         str_grid = np.full(self.grid.shape, fill_value='_', dtype=str)

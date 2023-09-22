@@ -9,14 +9,15 @@ import pytest
 from ..board import Board
 from ..eval import death, candy_dist, best
 from ..search.choose import best_move, has_single_best_move
-from ..search.negamax import negamax_moves, negamax_ab_moves
+from ..search.negamax import negamax_moves, negamax_ab_moves, MOVE_HISTORY
 from ....constants import Move
 from ....snake import Snake
 
 
 @pytest.fixture(autouse=True)
-def ensure_gc():
+def cleanup():
     gc.collect()
+    MOVE_HISTORY.clear()
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3])

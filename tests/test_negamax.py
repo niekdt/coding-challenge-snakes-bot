@@ -1,7 +1,6 @@
 import contextlib
 import os
 import time
-from math import inf
 
 import numpy as np
 import pytest
@@ -32,7 +31,7 @@ def test_forced_move(depth, search):
 
 @pytest.mark.parametrize('depth', [1, 2, 3, 4])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
-def test_winning_move(depth, search):
+def test_winning_suicide(depth, search):
     board = Board(3, 3)
     board.set_state(
         snake1=Snake(id=0, positions=np.array([[1, 1], [0, 1], [0, 0]])),
@@ -41,11 +40,8 @@ def test_winning_move(depth, search):
     )
     ref_board = board.copy()
 
-    moves = search(board, depth=1, eval_fun=death.evaluate)
-    if search == negamax_moves:
-        assert moves == {Move.RIGHT: 0, Move.UP: inf, Move.DOWN: 0}
-    else:
-        assert moves == {Move.UP: inf}
+    with pytest.raises(Exception):
+        search(board, depth=1, eval_fun=death.evaluate)
 
     assert board == ref_board
 

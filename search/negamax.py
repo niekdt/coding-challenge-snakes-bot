@@ -55,7 +55,7 @@ def negamax_ab_moves(
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    board_hash = hash(board)
+    board_hash = board.approx_hash(force=True)
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 

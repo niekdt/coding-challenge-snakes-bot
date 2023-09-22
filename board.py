@@ -13,6 +13,7 @@ Self = TypeVar("Self", bound="Board")
 Pos = Tuple[int, int]
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
+POS_OFFSET = np.array((1, 1))
 
 MOVE_TO_DIRECTION = {
     Move.UP: (0, 1),
@@ -34,10 +35,14 @@ class Board:
 
         self.width: int = width
         self.height: int = height
-        self.center: Pos = (int(width / 2), int(height / 2))
-        self.grid: ndarray = np.zeros([width, height], dtype=int)
-        self.candies: List[Pos] = list()
+        self.center: Pos = (int(width / 2) + 1, int(height / 2) + 1)
+        self.grid: ndarray = np.pad(
+            np.zeros([width, height], dtype=int),
+            pad_width=1,
+            constant_values=10000
+        )
         self.candy_mask: ndarray = np.full(self.grid.shape, fill_value=False, dtype=bool)
+        self.candies: List[Pos] = list()
         self.player1_pos: Pos = (-2, -2)
         self.player2_pos: Pos = (-2, -2)
         self.player1_head: int = 0
@@ -50,7 +55,10 @@ class Board:
         self.move_candy_stack: Deque[bool] = deque(maxlen=32)
 
     def spawn(self, pos1: Pos, pos2: Pos) -> None:
-        """Spawn snakes of length 1 at the given positions. Merely for testing purposes."""
+        """Spawn snakes of length 1 at the given positions
+        Indices start from 0
+
+        Merely for testing purposes"""
         self.set_state(
             snake1=Snake(id=0, positions=np.array([pos1])),
             snake2=Snake(id=1, positions=np.array([pos2])),
@@ -62,7 +70,7 @@ class Board:
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid
-        self.grid.fill(0)
+        self.grid[1:-1, 1:-1] = 0
         self.candy_mask.fill(False)
         self.candies.clear()
 
@@ -78,21 +86,22 @@ class Board:
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
-            self.grid[tuple(pos)] = self.player1_head - i
+            self.grid[pos[0] + 1, pos[1] + 1] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
-            self.grid[tuple(pos)] = self.player2_head + i
+            self.grid[pos[0] + 1, pos[1] + 1] = self.player2_head + i
 
-        self.player1_pos = tuple(snake1.positions[0])
-        self.player2_pos = tuple(snake2.positions[0])
+        self.player1_pos = tuple(snake1.positions[0] + POS_OFFSET)
+        self.player2_pos = tuple(snake2.positions[0] + POS_OFFSET)
 
         # spawn candies
         for pos in candies:
-            self._spawn_candy(tuple(pos))
+            self._spawn_candy(tuple(pos + POS_OFFSET))
         self.invalidate()
 
     def _spawn_candy(self, pos: Pos) -> None:
+        assert min(pos) > 0
         self.candies.append(pos)
         self.candy_mask[pos] = True
 
@@ -104,7 +113,7 @@ class Board:
     def shape(self) -> Tuple[int, int]:
         return self.width, self.height
 
-    def get_free_space(self) -> int:
+    def count_free_space(self) -> int:
         return self.get_empty_mask().sum()
 
     def is_valid_pos(self, pos: Pos) -> bool:
@@ -151,20 +160,20 @@ class Board:
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
-        return (pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))) or \
-            (pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))) or \
-            (pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))) or \
-            (pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1)))
+        return self.is_empty_pos((pos[0] - 1, pos[1])) or \
+            self.is_empty_pos((pos[0] + 1, pos[1])) or \
+            self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1)) or \
+            self.is_empty_pos((pos[0], pos[1] - 1))
 
     def can_do_move(self, move: Move, pos: Pos) -> bool:
         if move == Move.LEFT:
-            return pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))
+            return self.is_empty_pos((pos[0] - 1, pos[1]))
         elif move == Move.RIGHT:
-            return pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))
+            return self.is_empty_pos((pos[0] + 1, pos[1]))
         elif move == Move.UP:
-            return pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))
+            return self.is_empty_pos((pos[0], pos[1] + 1))
         else:
-            return pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1))
+            return self.is_empty_pos((pos[0], pos[1] - 1))
 
     def can_player1_do_move(self, move: Move) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -184,12 +193,14 @@ class Board:
         else:
             pos = self.player2_pos
 
-        can_move_left = pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))
-        can_move_right = pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))
-        can_move_up = pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))
-        can_move_down = pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1))
+        can_moves = [
+            self.is_empty_pos((pos[0] - 1, pos[1])),  # left
+            self.is_empty_pos((pos[0] + 1, pos[1])),  # right
+            self.is_empty_pos((pos[0], pos[1] + 1)),  # up
+            self.is_empty_pos((pos[0], pos[1] - 1))  # down
+        ]
 
-        return tuple(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
+        return tuple(compress(ALL_MOVES, can_moves))
 
     def get_valid_moves_ordered(self, player: int, order: Tuple[Move] = ALL_MOVES) -> List[Move]:
         moves = self.get_valid_moves(player=player)
@@ -329,26 +340,21 @@ class Board:
 
     def invalidate(self) -> None:
         """Clears the cached state of the board. Forces hash recomputation on request"""
-        self._hashes = (0, 0, 0)
+        self._hash, self._approx_hash, self._wall_hash = 0, 0, 0
 
     def __str__(self) -> str:
-        str_grid = np.full(self.shape, fill_value='_', dtype=str)
+        str_grid = np.full(self.grid.shape, fill_value='_', dtype=str)
         str_grid[self.get_player1_mask()] = 'a'
         str_grid[self.get_player2_mask()] = 'b'
+        str_grid[0:, (0, -1), ] = '-'
+        str_grid[(0, -1), 0:] = '|'
+        str_grid[(0, 0, -1, -1), (0, -1, -1, 0)] = '+'
         str_grid[self.get_candy_mask()] = '*'
         if self.player1_length > 0:
             str_grid[self.player1_pos] = 'A'
             str_grid[self.player2_pos] = 'B'
 
-        str_field = np.pad(str_grid, [(1, 1), (1, 1)], mode='constant')
-        str_field[0:, (0, -1)] = '-'
-        str_field[(0, -1), 0:] = '|'
-        str_field[(0, 0, -1, -1), (0, -1, -1, 0)] = '+'
-
-        # how to join array elems into single string??
-        # for now, use array2string and clean up the garbage output by np
-        # how to replace multiple chars?
-        return '\n' + np.array2string(np.flipud(str_field.T), separator=''). \
+        return '\n' + np.array2string(np.flipud(str_grid.T), separator=''). \
             replace('[', ''). \
             replace(']', ''). \
             replace("'", ''). \
@@ -356,9 +362,7 @@ class Board:
             replace('_', '·')
 
     def __repr__(self) -> str:
-        # TODO add turn info
-        str_board = str(self)
-        return str_board
+        return str(self)
 
 
 def as_move(move: ndarray) -> Move:
@@ -392,7 +396,3 @@ def player_num(player) -> int:
 
 def _hash_np(x) -> int:
     return hash(x.data.tobytes())
-
-
-def invalidate_board(board):
-    board._hashes = (0, 0, 0)

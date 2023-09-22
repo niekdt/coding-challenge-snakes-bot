@@ -14,9 +14,9 @@ def test_init():
     assert b.shape == (8, 6)
     assert len(b) == 8 * 6
 
-    assert np.all(b.get_empty_mask())
-    assert not np.any(b.get_player1_mask())
-    assert not np.any(b.get_player2_mask())
+    assert np.all(b.get_empty_mask()[1:-1, 1:-1])
+    assert not np.any(b.get_player1_mask()[1:-1, 1:-1])
+    assert not np.any(b.get_player2_mask()[1:-1, 1:-1])
     assert not b.has_candy()
     assert hash(b) != 0
     assert b.approx_hash() != 0
@@ -35,10 +35,10 @@ def test_spawn():
     b = Board(4, 4)
     b.spawn(pos1=(1, 2), pos2=(2, 3))
 
-    assert b.player1_pos == (1, 2)
-    assert b.player2_pos == (2, 3)
-    assert np.sum(b.get_player1_mask()) == 1
-    assert np.sum(b.get_player2_mask()) == 1
+    assert b.player1_pos == (2, 3)
+    assert b.player2_pos == (3, 4)
+    assert np.sum(b.get_player1_mask()[1:-1, 1:-1]) == 1
+    assert np.sum(b.get_player2_mask()[1:-1, 1:-1]) == 1
     assert not b.is_empty_pos(b.player1_pos)
     assert not b.is_empty_pos(b.player2_pos)
 
@@ -57,34 +57,41 @@ def test_is_valid_pos():
 def test_get_empty_mask():
     b = Board(3, 2)
     ref_mask = np.full(b.shape, fill_value=True)
-    assert_array_equal(b.get_empty_mask(), ref_mask)
+    assert_array_equal(b.get_empty_mask()[1:-1, 1:-1], ref_mask)
 
     b.spawn(pos1=(0, 0), pos2=(2, 1))
     ref_mask[(0, 0)] = False
     ref_mask[(2, 1)] = False
-    assert_array_equal(b.get_empty_mask(), ref_mask)
+    assert_array_equal(b.get_empty_mask()[1:-1, 1:-1], ref_mask)
 
 
 def test_is_empty_pos():
     b = Board(3, 2)
+    for x in range(0, b.width + 1):
+        assert not b.is_empty_pos((x, 0))
+        assert not b.is_empty_pos((x, b.height + 1))
+    for y in range(0, b.height + 1):
+        assert not b.is_empty_pos((0, y))
+        assert not b.is_empty_pos((b.width + 1, y))
+
     for x, y in itertools.product(range(b.width), range(b.height)):
-        assert b.is_empty_pos((x, y))
+        assert b.is_empty_pos((x + 1, y + 1))
 
     b.spawn(pos1=(0, 0), pos2=(2, 1))
-    assert not b.is_empty_pos((0, 0))
-    assert not b.is_empty_pos((2, 1))
+    assert not b.is_empty_pos((1, 1))
+    assert not b.is_empty_pos((3, 2))
 
-    assert b.is_empty_pos((0, 1))
+    assert b.is_empty_pos((1, 2))
 
 
 def test_spawn_candy():
     b = Board(3, 2)
     b0 = b.copy()
     assert not b.has_candy()
-    assert not b.candy_mask[(0, 1)]
-    b._spawn_candy((0, 1))
+    assert not b.candy_mask[(1, 2)]
+    b._spawn_candy((1, 2))
     assert b.has_candy()
-    assert b.candy_mask[(0, 1)]
+    assert b.candy_mask[(1, 2)]
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
@@ -93,11 +100,11 @@ def test_spawn_candy():
 
 def test_remove_candy():
     b = Board(3, 2)
-    b._spawn_candy((0, 1))
+    b._spawn_candy((1, 2))
     b0 = b.copy()
-    b._remove_candy((0, 1))
+    b._remove_candy((1, 2))
     assert not b.has_candy()
-    assert not b.candy_mask[(0, 1)]
+    assert not b.candy_mask[(1, 2)]
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
@@ -106,12 +113,13 @@ def test_remove_candy():
 
 def test_get_candy_mask():
     b = Board(3, 2)
-    ref_mask = np.full(b.shape, fill_value=False)
+    assert b.grid.shape == b.candy_mask.shape
+    ref_mask = np.full(b.grid.shape, fill_value=False)
     assert np.array_equal(b.get_candy_mask(), ref_mask)
     candy_pos = (1, 1)
     b._spawn_candy(candy_pos)
 
-    ref_mat = np.full(b.shape, fill_value=False)
+    ref_mat = np.full(b.grid.shape, fill_value=False)
     ref_mat[tuple(candy_pos)] = True
     assert np.array_equal(b.get_candy_mask(), ref_mat)
 
@@ -135,13 +143,13 @@ def test_is_candy_pos():
 
 def test_free_space():
     b = Board(8, 6)
-    assert b.get_free_space() == 8 * 6
+    assert b.count_free_space() == 8 * 6
 
     b.spawn(pos1=(1, 2), pos2=(2, 3))
-    assert b.get_free_space() == 8 * 6 - 2
+    assert b.count_free_space() == 8 * 6 - 2
 
-    b._spawn_candy((0, 0))
-    assert b.get_free_space() == 8 * 6 - 2  # should not affect free space
+    b._spawn_candy((1, 1))
+    assert b.count_free_space() == 8 * 6 - 2  # should not affect free space
 
 
 def test_perform_move():
@@ -155,10 +163,10 @@ def test_perform_move():
 
     # move P1
     b.perform_move(move=Move.RIGHT, player=1)
-    assert b.player1_pos == (1, 0)
-    assert b.is_empty_pos((0, 0))
-    assert not b.is_empty_pos((1, 0))
-    assert not b.is_empty_pos((2, 2))
+    assert b.player1_pos == (2, 1)
+    assert b.is_empty_pos((1, 1))
+    assert not b.is_empty_pos((2, 1))
+    assert not b.is_empty_pos((3, 3))
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
@@ -166,21 +174,21 @@ def test_perform_move():
 
     # move P2
     b.perform_move(move=Move.LEFT, player=2)
-    assert b.player2_pos == (1, 2)
-    assert b.is_empty_pos((0, 0))
-    assert b.is_empty_pos((2, 2))
-    assert not b.is_empty_pos((1, 0))
-    assert not b.is_empty_pos((1, 2))
+    assert b.player2_pos == (2, 3)
+    assert b.is_empty_pos((1, 1))
+    assert b.is_empty_pos((3, 3))
+    assert not b.is_empty_pos((2, 1))
+    assert not b.is_empty_pos((2, 3))
 
     # move P1 to center
     b.perform_move(move=Move.UP, player=1)
-    assert b.player1_pos == (1, 1)
+    assert b.player1_pos == (2, 2)
 
 
 def test_perform_move_candy():
     b = Board(3, 3)
     b.spawn(pos1=(0, 0), pos2=(2, 2))
-    candy_pos = (1, 0)
+    candy_pos = (2, 1)
     b._spawn_candy(candy_pos)
     b.perform_move(move=Move.RIGHT, player=1)
     assert not b.has_candy()  # candy should have been eaten
@@ -233,7 +241,7 @@ def test_undo_move():
 def test_undo_move_candy():
     b = Board(3, 3)
     b.spawn(pos1=(0, 0), pos2=(2, 2))
-    candy_pos = (1, 0)
+    candy_pos = (2, 1)
     b._spawn_candy(candy_pos)
     b_start = b.copy()
 
@@ -303,7 +311,7 @@ def test_set_state():
     assert b.player2_length == 1
     assert b.last_player == -1
     assert_array_equal(
-        b.grid,
+        b.grid[1:-1, 1:-1],
         np.array([[1, 0], [0, -1]])
     )
     assert not b.has_candy()
@@ -321,7 +329,7 @@ def test_set_state():
     assert b.player2_length == 1
     assert b.last_player == -1
     assert_array_equal(
-        b.grid,
+        b.grid[1:-1, 1:-1],
         np.array([[1, 2], [0, -1]])
     )
     assert not b.has_candy()
@@ -338,7 +346,7 @@ def test_set_state():
     assert b3.player1_head == 2
     assert b3.player2_head == -2
     assert_array_equal(
-        b3.grid,
+        b3.grid[1:-1, 1:-1],
         np.array([[1, 2], [-2, -1]])
     )
     assert not b.has_candy()
@@ -354,7 +362,7 @@ def test_set_state_candy():
     )
     b1 = b.copy()
     assert b.has_candy()
-    assert b.is_candy_pos((1, 0))
+    assert b.is_candy_pos((2, 1))
 
     # no candies (reuse board)
     b.set_state(
@@ -363,10 +371,10 @@ def test_set_state_candy():
         candies=[]
     )
     assert not b.has_candy()
-    assert not b.is_candy_pos((1, 0))
+    assert not b.is_candy_pos((2, 1))
     assert hash(b) != hash(b1)
     assert b.approx_hash() != b1.approx_hash()
-    assert b.wall_hash() == b1.wall_hash() # wall hash should be equal since only diff is candies
+    assert b.wall_hash() == b1.wall_hash()  # wall hash should be equal since only diff is candies
 
     # two candies
     b.set_state(
@@ -375,8 +383,8 @@ def test_set_state_candy():
         candies=[(1, 0), (0, 1)]
     )
     assert b.has_candy()
-    assert b.is_candy_pos((1, 0))
-    assert b.is_candy_pos((0, 1))
+    assert b.is_candy_pos((2, 1))
+    assert b.is_candy_pos((1, 2))
 
 
 @pytest.mark.parametrize('move', MOVES)

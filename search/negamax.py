@@ -6,9 +6,11 @@ from ..board import Board
 
 
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
-    moves = board.get_valid_moves(player=1)
-    assert len(moves) > 0, 'no possible moves!'
+    # suicide
+    if board.player1_length > 2 * board.player2_length:
+        raise Exception('ayy lmao')
 
+    moves = board.get_valid_moves(player=1)
     move_values = dict()
     for move in moves:
         board.perform_move(move, player=1)
@@ -22,12 +24,16 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
     if depth == 0:
         return eval_fun(board, player=player)
 
+    # suicide
+    if player == 1:
+        best_value = inf if board.player1_length > 2 * board.player2_length else -inf
+    else:
+        best_value = inf if board.player2_length > 2 * board.player1_length else -inf
+
+    if best_value == inf:
+        return best_value
+
     moves = board.get_valid_moves(player=player)
-
-    if len(moves) == 0:  # current player is stuck
-        return -inf  # TODO compute game score, as we may still have won if the other player died first
-
-    best_value = -inf
     for move in moves:
         board.perform_move(move, player=player)
         best_value = max(
@@ -39,12 +45,17 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
 
 
 def negamax_ab_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
+    # suicide
+    if board.player1_length > 2 * board.player2_length:
+        raise Exception('ayy lmao')
+
     moves = board.get_valid_moves(player=1)
     assert len(moves) > 0, 'no possible moves!'
 
     alpha = -inf
     beta = inf
     best_move = Move.UP
+
     best_value = -inf
     for move in moves:
         if __debug__:
@@ -88,12 +99,19 @@ def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float,
         # print(f'{indent}D{0:02d} P{player:2d}: leaf node score = {s}')
         return s
 
+    # suicide
+    if player == 1:
+        best_value = inf if board.player1_length > 2 * board.player2_length else -inf
+    else:
+        best_value = inf if board.player2_length > 2 * board.player1_length else -inf
+
+    if best_value == inf:
+        return best_value
+
     moves = board.iterate_valid_moves(player=player)
 
     best_value = -inf
-    has_moved = False
     for move in moves:
-        has_moved = True
         board.perform_move(move, player=player)
         value = -negamax_ab(board, depth=depth - 1, player=-player, alpha=-beta, beta=-alpha, eval_fun=eval_fun)
         board.undo_move(player=player)
@@ -103,8 +121,5 @@ def negamax_ab(board: Board, depth: int, player: int, alpha: float, beta: float,
         if alpha >= beta:
             # print(f'{indent}D{depth:02d} P{player:2d}: prune with value {best_value} because alpha >= beta ({alpha} >= {beta})')
             return best_value
-
-    if not has_moved:  # current player is stuck
-        return -inf  # TODO compute game score, as we may still have won if the other player died first
 
     return best_value

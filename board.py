@@ -121,8 +121,8 @@ class Board:
     def get_player_pos(self, player: int) -> Pos:
         return self.player1_pos if player == 1 else self.player2_pos
 
-    def get_candies(self) -> List[Pos]:
-        return self.candies.copy()
+    def get_candies(self) -> Tuple[Pos]:
+        return tuple(self.candies)
 
     def get_empty_mask(self) -> ndarray:
         return np.logical_and(

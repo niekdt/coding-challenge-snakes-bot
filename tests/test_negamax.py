@@ -1,4 +1,5 @@
 import contextlib
+import gc
 import os
 import time
 
@@ -11,6 +12,11 @@ from ..search.choose import best_move, has_single_best_move
 from ..search.negamax import negamax_moves, negamax_ab_moves
 from ....constants import Move
 from ....snake import Snake
+
+
+@pytest.fixture(autouse=True)
+def ensure_gc():
+    gc.collect()
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3])
@@ -116,7 +122,8 @@ def test_goto_candy_near2(depth, search):
     assert best_move(moves) in (Move.LEFT, Move.UP)
 
 
-@pytest.mark.parametrize('search,depth', [(negamax_moves, 9), (negamax_ab_moves, 14)])
+# 957 ms
+@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16)])
 def test_computation_time(search, depth):
     eval_fun = candy_dist.evaluate
     board = Board(16, 16)
@@ -130,4 +137,4 @@ def test_computation_time(search, depth):
     with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
         moves = search(board, depth=depth, eval_fun=eval_fun)
         move = best_move(moves)
-    assert (time.time() - start) < .14
+    assert (time.time() - start) < .51

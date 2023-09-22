@@ -122,7 +122,7 @@ def test_goto_candy_near2(depth, search):
 
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
 def test_computation_time(search):
-    depth = 8
+    depth = 9
     eval_fun = candy_dist.evaluate
     board = Board(16, 16)
     board.set_state(
@@ -135,4 +135,4 @@ def test_computation_time(search):
     with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
         moves = search(board, depth=depth, eval_fun=eval_fun)
         move = best_move(moves)
-    assert (time.time() - start) < .23
+    assert (time.time() - start) < .4

@@ -1,7 +1,7 @@
 from collections import deque
 from copy import deepcopy
 from itertools import compress
-from typing import List, Deque, TypeVar, Tuple
+from typing import List, Deque, TypeVar, Tuple, Iterable
 
 import numpy as np
 from numpy import ndarray
@@ -147,6 +147,28 @@ class Board:
             (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
             (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
 
+    def can_do_move(self, move: Move, pos: ndarray) -> bool:
+        if move == Move.LEFT:
+            return pos[0] > 0 and self.is_empty_pos(pos + LEFT)
+        elif move == Move.RIGHT:
+            return pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)
+        elif move == Move.UP:
+            return pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)
+        else:
+            return pos[1] > 0 and self.is_empty_pos(pos + DOWN)
+
+    def can_player1_do_move(self, move: Move) -> bool:
+        return self.can_do_move(move, self.player1_pos)
+
+    def can_player2_do_move(self, move: Move) -> bool:
+        return self.can_do_move(move, self.player2_pos)
+
+    def iterate_valid_moves(self, player: int, order: Tuple[Move] = ALL_MOVES) -> Iterable[Move]:
+        if player == 1:
+            return filter(self.can_player1_do_move, order)
+        else:
+            return filter(self.can_player2_do_move, order)
+
     def get_valid_moves(self, player: int) -> Tuple[Move]:
         if player == 1:
             pos = self.player1_pos
@@ -159,6 +181,10 @@ class Board:
         can_move_down = pos[1] > 0 and self.is_empty_pos(pos + DOWN)
 
         return tuple(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
+
+    def get_valid_moves_ordered(self, player: int, order: Tuple[Move] = ALL_MOVES) -> List[Move]:
+        moves = self.get_valid_moves(player=player)
+        return [x for _, x in sorted(zip(order, moves))]
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: Move, player: int) -> None:

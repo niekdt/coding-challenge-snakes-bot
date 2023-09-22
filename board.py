@@ -6,17 +6,23 @@ from typing import List, Deque, TypeVar, Tuple, Iterable
 import numpy as np
 from numpy import ndarray
 
-from ...constants import LEFT, RIGHT, UP, DOWN, Move, MOVE_VALUE_TO_DIRECTION
+from ...constants import Move
 from ...snake import Snake
 
 Self = TypeVar("Self", bound="Board")
+Pos = Tuple[int, int]
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
 
+MOVE_TO_DIRECTION = {
+    Move.UP: (0, 1),
+    Move.DOWN: (0, -1),
+    Move.LEFT: (-1, 0),
+    Move.RIGHT: (1, 0),
+}
+
 
 class Board:
-    _target_pos = np.array((0, 0), dtype=int)
-
     def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
         assert width > 0
@@ -24,12 +30,12 @@ class Board:
 
         self.width: int = width
         self.height: int = height
-        self.center: Tuple[int, int] = (int(width / 2), int(height / 2))
+        self.center: Pos = (int(width / 2), int(height / 2))
         self.grid: ndarray = np.zeros([width, height], dtype=int)
-        self.candies: List[Tuple[int, int]] = list()
+        self.candies: List[Pos] = list()
         self.candy_mask: ndarray = np.full(self.grid.shape, fill_value=False, dtype=bool)
-        self.player1_pos: ndarray = np.array((-2, -2), dtype=int)
-        self.player2_pos: ndarray = np.array((-2, -2), dtype=int)
+        self.player1_pos: Pos = (-2, -2)
+        self.player2_pos: Pos = (-2, -2)
         self.player1_head: int = 0
         self.player2_head: int = 0
         self.player1_length: int = 0
@@ -39,7 +45,7 @@ class Board:
         self.move_head_stack: Deque[int] = deque(maxlen=32)
         self.move_candy_stack: Deque[bool] = deque(maxlen=32)
 
-    def spawn(self, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> None:
+    def spawn(self, pos1: Pos, pos2: Pos) -> None:
         """Spawn snakes of length 1 at the given positions. Merely for testing purposes."""
         self.set_state(
             snake1=Snake(id=0, positions=np.array([pos1])),
@@ -67,29 +73,26 @@ class Board:
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
-            self.grid[pos[0], pos[1]] = self.player1_head - i
+            self.grid[tuple(pos)] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
-            self.grid[pos[0], pos[1]] = self.player2_head + i
+            self.grid[tuple(pos)] = self.player2_head + i
 
-        # set player positions to the head of the snake (the tail of the list)
-        np.copyto(self.player1_pos, snake1.positions[0], casting='no')
-        np.copyto(self.player2_pos, snake2.positions[0], casting='no')
+        self.player1_pos = tuple(snake1.positions[0])
+        self.player2_pos = tuple(snake2.positions[0])
 
         # spawn candies
         for pos in candies:
-            self.spawn_candy(pos)
+            self.spawn_candy(tuple(pos))
 
-    def spawn_candy(self, pos: ndarray) -> None:
-        pos_tuple = tuple(pos)
-        assert pos_tuple not in self.candies
-        self.candies.append(pos_tuple)
-        self.candy_mask[pos[0], pos[1]] = True
+    def spawn_candy(self, pos: Pos) -> None:
+        self.candies.append(pos)
+        self.candy_mask[pos] = True
 
-    def remove_candy(self, pos: ndarray) -> None:
-        self.candies.remove(tuple(pos))
-        self.candy_mask[pos[0], pos[1]] = False
+    def remove_candy(self, pos: Pos) -> None:
+        self.candies.remove(pos)
+        self.candy_mask[pos] = False
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -98,21 +101,21 @@ class Board:
     def get_free_space(self) -> int:
         return self.get_empty_mask().sum()
 
-    def is_valid_pos(self, pos: ndarray) -> bool:
+    def is_valid_pos(self, pos: Pos) -> bool:
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
 
-    def is_candy_pos(self, pos: ndarray) -> bool:
-        return self.candy_mask[pos[0], pos[1]]
+    def is_candy_pos(self, pos: Pos) -> bool:
+        return self.candy_mask[pos]
 
-    def is_empty_pos(self, pos: ndarray) -> bool:
+    def is_empty_pos(self, pos: Pos) -> bool:
         return self.player2_head + self.player2_length <= \
-            self.grid[pos[0], pos[1]] <= \
+            self.grid[pos] <= \
             self.player1_head - self.player1_length
 
-    def get_player_pos(self, player: int) -> ndarray:
+    def get_player_pos(self, player: int) -> Pos:
         return self.player1_pos if player == 1 else self.player2_pos
 
-    def get_candies(self) -> List[Tuple[int, int]]:
+    def get_candies(self) -> List[Pos]:
         return self.candies.copy()
 
     def get_empty_mask(self) -> ndarray:
@@ -142,20 +145,20 @@ class Board:
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
-        return (pos[0] > 0 and self.is_empty_pos(pos + LEFT)) or \
-            (pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)) or \
-            (pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)) or \
-            (pos[1] > 0 and self.is_empty_pos(pos + DOWN))
+        return (pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))) or \
+            (pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))) or \
+            (pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))) or \
+            (pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1)))
 
-    def can_do_move(self, move: Move, pos: ndarray) -> bool:
+    def can_do_move(self, move: Move, pos: Pos) -> bool:
         if move == Move.LEFT:
-            return pos[0] > 0 and self.is_empty_pos(pos + LEFT)
+            return pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))
         elif move == Move.RIGHT:
-            return pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)
+            return pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))
         elif move == Move.UP:
-            return pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)
+            return pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))
         else:
-            return pos[1] > 0 and self.is_empty_pos(pos + DOWN)
+            return pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1))
 
     def can_player1_do_move(self, move: Move) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -175,10 +178,10 @@ class Board:
         else:
             pos = self.player2_pos
 
-        can_move_left = pos[0] > 0 and self.is_empty_pos(pos + LEFT)
-        can_move_right = pos[0] < self.width - 1 and self.is_empty_pos(pos + RIGHT)
-        can_move_up = pos[1] < self.height - 1 and self.is_empty_pos(pos + UP)
-        can_move_down = pos[1] > 0 and self.is_empty_pos(pos + DOWN)
+        can_move_left = pos[0] > 0 and self.is_empty_pos((pos[0] - 1, pos[1]))
+        can_move_right = pos[0] < self.width - 1 and self.is_empty_pos((pos[0] + 1, pos[1]))
+        can_move_up = pos[1] < self.height - 1 and self.is_empty_pos((pos[0], pos[1] + 1))
+        can_move_down = pos[1] > 0 and self.is_empty_pos((pos[0], pos[1] - 1))
 
         return tuple(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
 
@@ -188,37 +191,35 @@ class Board:
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: Move, player: int) -> None:
-        move_vec = MOVE_VALUE_TO_DIRECTION[move]
+        direction = MOVE_TO_DIRECTION[move]
 
         # TODO remove branching
         if player == 1:
-            np.copyto(self._target_pos, self.player1_pos, casting='no')
-            np.add(self._target_pos, move_vec, out=self._target_pos)  # compute new pos
+            target_pos = (self.player1_pos[0] + direction[0], self.player1_pos[1] + direction[1])
 
             # update game state
-            ate_candy = self.is_candy_pos(self._target_pos)
+            ate_candy = self.is_candy_pos(target_pos)
             self.move_candy_stack.append(ate_candy)
-            self.move_pos_stack.append(tuple(self.player1_pos))
-            self.move_head_stack.append(self.grid[self._target_pos[0], self._target_pos[1]])
-            np.copyto(self.player1_pos, self._target_pos, casting='no')
+            self.move_pos_stack.append(self.player1_pos)
+            self.move_head_stack.append(self.grid[target_pos])
+            self.player1_pos = target_pos
             self.player1_head += 1
-            self.grid[self.player1_pos[0], self.player1_pos[1]] = self.player1_head
+            self.grid[self.player1_pos] = self.player1_head
 
             if ate_candy:
                 self.player1_length += 1
                 self.remove_candy(self.player1_pos)
         else:
-            np.copyto(self._target_pos, self.player2_pos, casting='no')
-            np.add(self._target_pos, move_vec, out=self._target_pos)
+            target_pos = (self.player2_pos[0] + direction[0], self.player2_pos[1] + direction[1])
 
             # update game state
-            ate_candy = self.is_candy_pos(self._target_pos)
+            ate_candy = self.is_candy_pos(target_pos)
             self.move_candy_stack.append(ate_candy)
-            self.move_pos_stack.append(tuple(self.player2_pos))
-            self.move_head_stack.append(self.grid[self._target_pos[0], self._target_pos[1]])
-            np.copyto(self.player2_pos, self._target_pos, casting='no')
+            self.move_pos_stack.append(self.player2_pos)
+            self.move_head_stack.append(self.grid[target_pos])
+            self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
-            self.grid[self.player2_pos[0], self.player2_pos[1]] = self.player2_head
+            self.grid[self.player2_pos] = self.player2_head
             if ate_candy:
                 self.player2_length += 1
                 self.remove_candy(self.player2_pos)
@@ -235,23 +236,23 @@ class Board:
             if ate_candy:
                 self.player1_length -= 1
                 self.spawn_candy(self.player1_pos)
-            self.grid[self.player1_pos[0], self.player1_pos[1]] = self.move_head_stack.pop()
-            np.copyto(self.player1_pos, self.move_pos_stack.pop())
+            self.grid[self.player1_pos] = self.move_head_stack.pop()
+            self.player1_pos = self.move_pos_stack.pop()
             self.player1_head -= 1
         else:
             if ate_candy:
                 self.player2_length -= 1
                 self.spawn_candy(self.player2_pos)
-            self.grid[self.player2_pos[0], self.player2_pos[1]] = self.move_head_stack.pop()
-            np.copyto(self.player2_pos, self.move_pos_stack.pop())
+            self.grid[self.player2_pos] = self.move_head_stack.pop()
+            self.player2_pos = self.move_pos_stack.pop()
             self.player2_head += 1
 
         self.last_player = -self.last_player
 
     def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
-        np.copyto(self.player1_pos, board.player1_pos, casting='no')
-        np.copyto(self.player2_pos, board.player2_pos, casting='no')
+        self.player1_pos = board.player1_pos
+        self.player2_pos = board.player2_pos
         np.copyto(self.grid, board.grid, casting='no')
         np.copyto(self.candy_mask, board.candy_mask, casting='no')
 
@@ -278,8 +279,8 @@ class Board:
             self.player2_length == other.player2_length and \
             self.last_player == other.last_player and \
             set(self.candies) == set(other.candies) and \
-            np.array_equal(self.player1_pos, other.player1_pos) and \
-            np.array_equal(self.player2_pos, other.player2_pos) and \
+            self.player1_pos == other.player1_pos and \
+            self.player2_pos == other.player2_pos and \
             np.array_equal(self.grid, other.grid) and \
             np.array_equal(self.candy_mask, other.candy_mask) and \
             self.move_pos_stack == other.move_pos_stack and \
@@ -292,8 +293,8 @@ class Board:
         str_grid[self.get_player2_mask()] = 'b'
         str_grid[self.get_candy_mask()] = '*'
         if self.player1_length > 0:
-            str_grid[tuple(self.player1_pos)] = 'A'
-            str_grid[tuple(self.player2_pos)] = 'B'
+            str_grid[self.player1_pos] = 'A'
+            str_grid[self.player2_pos] = 'B'
 
         str_field = np.pad(str_grid, [(1, 1), (1, 1)], mode='constant')
         str_field[0:, (0, -1)] = '-'

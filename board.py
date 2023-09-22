@@ -12,11 +12,6 @@ from ...snake import Snake
 Self = TypeVar("Self", bound="Board")
 
 ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
-MOVE_COMBINATIONS = [tuple(compress(ALL_MOVES, [x & 1 > 0, x & 2 > 0, x & 4 > 0, x & 8 > 0])) for x in range(0, 16)]
-
-
-def get_moves(left: bool, right: bool, up: bool, down: bool) -> Tuple[Move]:
-    return MOVE_COMBINATIONS[left + (right << 1) + (up << 2) + (down << 3)]
 
 
 class Board:
@@ -164,7 +159,6 @@ class Board:
         can_move_down = pos[1] > 0 and self.is_empty_pos(pos + DOWN)
 
         return tuple(compress(ALL_MOVES, [can_move_left, can_move_right, can_move_up, can_move_down]))
-        # return get_moves(can_move_left, can_move_right, can_move_up, can_move_down)
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: Move, player: int) -> None:

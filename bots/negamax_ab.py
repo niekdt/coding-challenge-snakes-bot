@@ -6,7 +6,7 @@ import numpy as np
 from ..board import Board
 from ..eval import death
 from ..search.choose import best_move, get_best_moves_count
-from ..search.negamax import negamax_ab_moves
+from ..search.pvs import pvs_moves
 from ....bot import Bot
 from ....constants import Move
 from ....snake import Snake
@@ -45,7 +45,7 @@ class NegamaxAbBot(Bot):
             print('Initial game state:', end='')
             print(self.board)
 
-        move_values = negamax_ab_moves(
+        move_values = pvs_moves(
             self.board,
             depth=self.depth,
             eval_fun=self.eval_fun,

@@ -6,6 +6,7 @@ import time
 import numpy as np
 import pytest
 
+from snakes.bots.niekdt.search.pvs import pvs_moves
 from ..board import Board
 from ..eval import death, candy_dist, best
 from ..search.choose import best_move, has_single_best_move
@@ -21,7 +22,7 @@ def cleanup():
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_forced_move(depth, search):
     board = Board(2, 2)
     board.set_state(
@@ -37,7 +38,7 @@ def test_forced_move(depth, search):
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3, 4])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_winning_suicide(depth, search):
     board = Board(3, 3)
     board.set_state(
@@ -71,7 +72,7 @@ def test_goto_candy(depth, search, size):
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_far(depth, search):
     board = Board(16, 16)
     board.set_state(
@@ -89,7 +90,7 @@ def test_goto_candy_far(depth, search):
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_near(depth, search):
     board = Board(16, 16)
     board.set_state(
@@ -106,7 +107,7 @@ def test_goto_candy_near(depth, search):
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10, 12, 14])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves])
+@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_near2(depth, search):
     if depth > 10 and search == negamax_moves:
         pytest.skip()
@@ -124,7 +125,7 @@ def test_goto_candy_near2(depth, search):
 
 
 # 957 ms
-@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16)])
+@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 16)])
 def test_computation_time(search, depth):
     eval_fun = candy_dist.evaluate
     board = Board(16, 16)

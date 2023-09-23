@@ -16,7 +16,7 @@ def pvs_moves(
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    board_hash = board.approx_hash(force=True)
+    board_hash = board.approx_hash()
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
@@ -50,13 +50,13 @@ def pvs_moves(
 
 
 def pvs(
-    board: Board,
-    depth: int,
-    player: int,
-    alpha: float,
-    beta: float,
-    eval_fun: callable,
-    move_history: Dict
+        board: Board,
+        depth: int,
+        player: int,
+        alpha: float,
+        beta: float,
+        eval_fun: callable,
+        move_history: Dict
 ) -> float:
     if depth == 0:
         return eval_fun(board, player=player)
@@ -72,7 +72,7 @@ def pvs(
     elif not board.can_move(player):
         return -999999
 
-    board_hash = board.approx_hash(force=True)
+    board_hash = board.approx_hash()
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.iterate_valid_moves(player=player, order=move_order)
 

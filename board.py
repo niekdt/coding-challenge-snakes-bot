@@ -27,9 +27,6 @@ MOVE_TO_DIRECTION = {
 
 
 class Board:
-    _approx_hash: int = 0
-    _wall_hash: int = 0
-
     def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
         assert width > 0
@@ -66,7 +63,6 @@ class Board:
             snake2=Snake(id=1, positions=np.array([pos2])),
             candies=[]
         )
-        self.invalidate()
 
     def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
         self.last_player = -1  # set P2 to have moved last
@@ -100,7 +96,6 @@ class Board:
         # spawn candies
         for pos in candies:
             self._spawn_candy(tuple(pos + POS_OFFSET))
-        self.invalidate()
 
     def _spawn_candy(self, pos: Pos) -> None:
         assert min(pos) > 0
@@ -172,6 +167,21 @@ class Board:
             lb <= self.grid[x + 1, y] <= ub or \
             lb <= self.grid[x, y + 1] <= ub or \
             lb <= self.grid[x, y - 1] <= ub
+
+    def count_moves(self, player: int) -> int:
+        x, y = self.player1_pos if player == 1 else self.player2_pos
+
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+
+        return sum(
+            (
+                lb <= self.grid[x - 1, y] <= ub,
+                lb <= self.grid[x + 1, y] <= ub,
+                lb <= self.grid[x, y + 1] <= ub,
+                lb <= self.grid[x, y - 1] <= ub
+            )
+        )
 
     def can_do_move(self, move: Move, pos: Pos) -> bool:
         move_dir = MOVE_TO_DIRECTION[move]
@@ -249,9 +259,6 @@ class Board:
                 self._remove_candy(self.player2_pos)
 
         self.last_player = player
-        # invalidate cache
-        self._approx_hash = 0
-        self._wall_hash = 0
 
     def undo_move(self, player: int) -> None:
         assert player == self.last_player, 'Last move was performed by the other player'
@@ -275,10 +282,6 @@ class Board:
             self.player2_head += 1
 
         self.last_player = -self.last_player
-
-        # invalidate cache
-        self._approx_hash = 0
-        self._wall_hash = 0
 
     def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
@@ -322,27 +325,19 @@ class Board:
         """Hash of the exact game state. Not cached!"""
         return hash((_hash_np(self.grid), _hash_np(self.candy_mask), self.last_player))
 
-    def approx_hash(self, force=False) -> int:
+    def approx_hash(self) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
-        if self._approx_hash == 0 or force:
-            self._approx_hash = hash((
-                _hash_np(self.get_empty_mask()),
-                _hash_np(self.candy_mask),
-                self.player1_pos,
-                self.player2_pos,
-                self.last_player
-            ))
-        return self._approx_hash
+        return hash((
+            _hash_np(self.get_empty_mask()),
+            _hash_np(self.candy_mask),
+            self.player1_pos,
+            self.player2_pos,
+            self.last_player
+        ))
 
     def wall_hash(self) -> int:
         """Hash of the game state only considering blocked cells on the grid"""
-        if self._wall_hash == 0:
-            self._wall_hash = _hash_np(self.get_empty_mask())
-        return self._wall_hash
-
-    def invalidate(self) -> None:
-        """Clears the cached state of the board. Forces hash recomputation on request"""
-        self._approx_hash, self._wall_hash = 0, 0
+        return _hash_np(self.get_empty_mask())
 
     def __str__(self) -> str:
         str_grid = np.full(self.grid.shape, fill_value='_', dtype=str)

@@ -6,6 +6,7 @@ from ..board import Board, ALL_MOVES
 
 MOVE_HISTORY: Dict = dict()
 
+
 def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
@@ -55,7 +56,7 @@ def negamax_ab_moves(
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    board_hash = board.approx_hash(force=True)
+    board_hash = board.approx_hash()
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
@@ -109,7 +110,7 @@ def negamax_ab(
     if alpha == inf:
         return alpha
 
-    board_hash = board.approx_hash(force=True)
+    board_hash = board.approx_hash()
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.iterate_valid_moves(player=player, order=move_order)
 

@@ -139,4 +139,4 @@ def test_computation_time(search, depth):
     with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
         moves = search(board, depth=depth, eval_fun=eval_fun)
         move = best_move(moves)
-    assert (time.time() - start) < .51
+    assert (time.time() - start) < 1

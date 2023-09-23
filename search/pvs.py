@@ -1,33 +1,43 @@
 from math import inf
 from typing import Dict
 
-from snakes.bots.niekdt.board import Board, ALL_MOVES, FIRST_MOVE_ORDER
+from snakes.bots.niekdt.board import Board, ALL_MOVES, FIRST_MOVE_ORDER, distance
 from snakes.bots.niekdt.search.negamax import MOVE_HISTORY
 from snakes.constants import Move
 
+MAX_DEPTH = 32
+
 
 def pvs_moves(
-    board: Board,
-    depth: int,
-    eval_fun: callable,
-    move_history: Dict = MOVE_HISTORY
+        board: Board,
+        depth: int,
+        eval_fun: callable,
+        move_history: Dict = MOVE_HISTORY
 ) -> Dict[Move, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    board_hash = board.approx_hash()
+    board_hash = hash(board)
     move_order = move_history.get(board_hash, ALL_MOVES)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
     alpha = -inf
     beta = inf
     best_move = Move.UP
+    score_history = dict()
 
     best_value = -inf
     for move in moves:
+        if best_value == -inf and move == moves[-1]:
+            if __debug__:
+                print('Skipping last root move evaluation because all other moves sucked')
+            best_move = move
+            best_value = 0
+            break
+
         if __debug__:
-            print(f'== Evaluate {move} for alpha = {alpha} ==')
+            print(f'== Evaluate {move} with alpha={alpha} ==')
         board.perform_move(move, player=1)
         value = -pvs(
             board,
@@ -39,10 +49,11 @@ def pvs_moves(
             alpha=-beta,
             beta=-alpha,
             eval_fun=eval_fun,
-            move_history=move_history
+            move_history=move_history,
+            score_history=score_history
         )
         if __debug__:
-            print(f'\tGot value {value}')
+            print(f'\tGot score {value}')
         board.undo_move(player=1)
         if value > best_value:
             best_move = move
@@ -62,26 +73,36 @@ def pvs(
         alpha: float,
         beta: float,
         eval_fun: callable,
-        move_history: Dict
+        move_history: Dict,
+        score_history: Dict
 ) -> float:
-    if depth_left <= 1 and board.count_moves(player=player) == 1:
-        depth_left += 2
-
-    if depth_left == 0 or depth == 32:
-        return eval_fun(board, player=player)
+    if depth_left == 0 or (depth_left <= 2 and not is_quiet_node(board)):
+        return qsearch(
+            board,
+            my_move=my_move,
+            opponent_move=opponent_move,
+            depth_left=16,
+            depth=depth,
+            player=player,
+            alpha=alpha,
+            beta=beta,
+            eval_fun=eval_fun,
+            move_history=move_history,
+            score_history=score_history
+        )
 
     # what if we suicide?
     if player == 1:
         if board.player1_length > 2 * board.player2_length:
-            return inf
+            return 2 << 29
     else:
         if board.player2_length > 2 * board.player1_length:
             return 999999
 
     if not board.can_move(player):
-        return -999999
+        return -2 << 30 if player == 1 else -999999
 
-    board_hash = board.approx_hash()
+    board_hash = hash(board)
     move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[my_move])
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
@@ -105,7 +126,8 @@ def pvs(
         alpha=-beta,
         beta=-alpha,
         eval_fun=eval_fun,
-        move_history=move_history
+        move_history=move_history,
+        score_history=score_history
     )
     board.undo_move(player=player)
     move_scores[move] = value
@@ -116,6 +138,7 @@ def pvs(
 
     # do remaining moves
     for move in moves:
+        # search with zero window
         board.perform_move(move, player=player)
         value = -pvs(
             board,
@@ -127,7 +150,8 @@ def pvs(
             alpha=-alpha - 1,
             beta=-alpha,
             eval_fun=eval_fun,
-            move_history=move_history
+            move_history=move_history,
+            score_history=score_history
         )
         if alpha < value < beta:
             # search again with full [alpha, beta] window
@@ -141,7 +165,8 @@ def pvs(
                 alpha=-beta,
                 beta=-alpha,
                 eval_fun=eval_fun,
-                move_history=move_history
+                move_history=move_history,
+                score_history=score_history
             )
         board.undo_move(player=player)
         move_scores[move] = value
@@ -151,3 +176,53 @@ def pvs(
 
     move_history[board_hash] = sorted(ALL_MOVES, key=lambda m: move_scores[m], reverse=True)
     return alpha
+
+
+def qsearch(
+        board: Board,
+        my_move: Move,
+        opponent_move: Move,
+        depth_left: int,
+        depth: int,
+        player: int,
+        alpha: float,
+        beta: float,
+        eval_fun: callable,
+        move_history: Dict,
+        score_history: Dict
+) -> float:
+    if not board.can_move(player):
+        return -2 << 30  # do not use inf as it can lead to pruning issues (not sure why)
+    # print(f'Q-search for D{depth_left} into depth {depth}')
+
+    if depth_left == 0 or is_quiet_node(board) or depth >= MAX_DEPTH:
+        return eval_fun(board, player=player)
+
+    moves = board.iterate_valid_moves(player=player, order=FIRST_MOVE_ORDER[my_move])
+
+    for move in moves:
+        board.perform_move(move, player=player)
+        value = -qsearch(
+            board,
+            my_move=opponent_move,
+            opponent_move=move,
+            depth_left=depth_left - 1,
+            depth=depth + 1,
+            player=-player,
+            alpha=-beta,
+            beta=-alpha,
+            eval_fun=eval_fun,
+            move_history=move_history,
+            score_history=score_history
+        )
+        board.undo_move(player=player)
+        alpha = max(alpha, value)
+        if alpha >= beta:
+            break
+
+    return alpha
+
+
+def is_quiet_node(board: Board) -> bool:
+    return distance(board.player1_pos, board.player2_pos) > 2 and \
+        (board.count_moves(player=1) > 1 and board.count_moves(player=2) > 1)

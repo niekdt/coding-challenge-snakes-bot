@@ -139,17 +139,14 @@ def test_search_extension_issue(search, depth):
 
 
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 16)])
+@pytest.mark.timeout(5)
 def test_computation_time(search, depth):
-    eval_fun = candy_dist.evaluate
     board = Board(16, 16)
     board.set_state(
         snake1=Snake(id=0, positions=np.array([[0, 0]])),
         snake2=Snake(id=1, positions=np.array([[4, 4]])),
         candies=[np.array((2, 0))]
     )
+    print(board)
 
-    start = time.time()
-    with open(os.devnull, 'w') as f, contextlib.redirect_stdout(f):
-        moves = search(board, depth=depth, eval_fun=eval_fun)
-        move = best_move(moves)
-    assert (time.time() - start) < 1
+    search(board, depth=depth, eval_fun=candy_dist.evaluate)

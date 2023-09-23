@@ -64,7 +64,7 @@ def pvs(
         eval_fun: callable,
         move_history: Dict
 ) -> float:
-    if depth_left <= 0 and board.count_moves(player=player) == 1:
+    if depth_left <= 1 and board.count_moves(player=player) == 1:
         depth_left += 2
 
     if depth_left == 0 or depth == 32:

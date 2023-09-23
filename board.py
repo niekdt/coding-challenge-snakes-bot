@@ -326,16 +326,13 @@ class Board:
             self.player1_length == other.player1_length and \
             self.player2_length == other.player2_length and \
             self.last_player == other.last_player and \
-            set(self.candies) == set(other.candies) and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
-            np.array_equal(self.grid, other.grid) and \
-            self.move_pos_stack == other.move_pos_stack and \
-            self.move_head_stack == other.move_head_stack and \
-            self.move_candy_stack == other.move_candy_stack
+            set(self.candies) == set(other.candies) and \
+            np.array_equal(self.grid, other.grid)
 
     def __hash__(self) -> int:
-        """Hash of the exact game state. Not cached!"""
+        """Hash of the exact game state"""
         return hash((_hash_np(self.grid), tuple(self.candies), self.last_player))
 
     def approx_hash(self) -> int:

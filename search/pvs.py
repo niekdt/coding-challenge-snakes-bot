@@ -1,7 +1,7 @@
 from math import inf
 from typing import Dict
 
-from snakes.bots.niekdt.board import Board, ALL_MOVES
+from snakes.bots.niekdt.board import Board, ALL_MOVES, FIRST_MOVE_ORDER
 from snakes.bots.niekdt.search.negamax import MOVE_HISTORY
 from snakes.constants import Move
 
@@ -31,6 +31,8 @@ def pvs_moves(
         board.perform_move(move, player=1)
         value = -pvs(
             board,
+            my_move=Move.LEFT,
+            opponent_move=move,
             depth=depth - 1,
             player=-1,
             alpha=-beta,
@@ -46,11 +48,13 @@ def pvs_moves(
             best_value = value
         alpha = max(alpha, value)
 
-    return dict([(best_move, best_value)])
+    return {best_move: best_value}
 
 
 def pvs(
         board: Board,
+        my_move: Move,
+        opponent_move: Move,
         depth: int,
         player: int,
         alpha: float,
@@ -58,7 +62,7 @@ def pvs(
         eval_fun: callable,
         move_history: Dict
 ) -> float:
-    if board.count_moves(player=player) == 1:
+    if 0 < board.count_moves(player=player) < 2:
         depth += 1
 
     if depth == 0:
@@ -76,21 +80,23 @@ def pvs(
         return -999999
 
     board_hash = board.approx_hash()
-    move_order = move_history.get(board_hash, ALL_MOVES)
+    move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[my_move])
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
-    move_scores = dict({
+    move_scores = {
         Move.LEFT: -inf,
         Move.RIGHT: -inf,
         Move.UP: -inf,
         Move.DOWN: -inf
-    })
+    }
 
     # do first move
     move = next(moves, Move.UP)
     board.perform_move(move, player=player)
     value = -pvs(
         board,
+        my_move=opponent_move,
+        opponent_move=move,
         depth=depth - 1,
         player=-player,
         alpha=-beta,
@@ -110,6 +116,8 @@ def pvs(
         board.perform_move(move, player=player)
         value = -pvs(
             board,
+            my_move=opponent_move,
+            opponent_move=move,
             depth=depth - 1,
             player=-player,
             alpha=-alpha - 1,
@@ -121,6 +129,8 @@ def pvs(
             # search again with full [alpha, beta] window
             value = -pvs(
                 board,
+                my_move=opponent_move,
+                opponent_move=move,
                 depth=depth - 1,
                 player=-player,
                 alpha=-beta,

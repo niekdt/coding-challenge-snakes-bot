@@ -1,7 +1,7 @@
 from collections import deque
 from copy import deepcopy
 from itertools import compress
-from typing import List, Deque, TypeVar, Tuple, Iterable
+from typing import List, Deque, TypeVar, Tuple, Iterator
 
 import numpy as np
 from numpy import ndarray
@@ -24,6 +24,29 @@ MOVE_TO_DIRECTION = {
     Move.LEFT: (-1, 0),
     Move.RIGHT: (1, 0),
 }
+
+OPPOSITE_MOVE = {
+    Move.LEFT: Move.RIGHT,
+    Move.RIGHT: Move.LEFT,
+    Move.UP: Move.DOWN,
+    Move.DOWN: Move.UP
+}
+
+TURN_LEFT_MOVE = {
+    Move.LEFT: Move.DOWN,
+    Move.RIGHT: Move.UP,
+    Move.UP: Move.LEFT,
+    Move.DOWN: Move.RIGHT
+}
+
+TURN_RIGHT_MOVE = {
+    Move.LEFT: Move.UP,
+    Move.RIGHT: Move.DOWN,
+    Move.UP: Move.RIGHT,
+    Move.DOWN: Move.LEFT
+}
+
+FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[m]) for m in ALL_MOVES}
 
 
 class Board:
@@ -195,7 +218,7 @@ class Board:
     def can_player2_do_move(self, move: Move) -> bool:
         return self.can_do_move(move, self.player2_pos)
 
-    def iterate_valid_moves(self, player: int, order: Tuple[Move] = ALL_MOVES) -> Iterable[Move]:
+    def iterate_valid_moves(self, player: int, order: Tuple[Move] = ALL_MOVES) -> Iterator[Move]:
         if player == 1:
             return filter(self.can_player1_do_move, order)
         else:

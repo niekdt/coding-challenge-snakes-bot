@@ -49,9 +49,9 @@ class Board:
         self.player1_length: int = 0
         self.player2_length: int = 0
         self.last_player = 1
-        self.move_pos_stack: Deque[Pos] = deque(maxlen=32)
-        self.move_head_stack: Deque[int] = deque(maxlen=32)
-        self.move_candy_stack: Deque[bool] = deque(maxlen=32)
+        self.move_pos_stack: Deque[Pos] = deque(maxlen=128)
+        self.move_head_stack: Deque[int] = deque(maxlen=128)
+        self.move_candy_stack: Deque[bool] = deque(maxlen=128)
 
     def spawn(self, pos1: Pos, pos2: Pos) -> None:
         """Spawn snakes of length 1 at the given positions

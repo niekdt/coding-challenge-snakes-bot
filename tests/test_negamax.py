@@ -124,7 +124,20 @@ def test_goto_candy_near2(depth, search):
     assert best_move(moves) in (Move.LEFT, Move.UP)
 
 
-# 957 ms
+@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 12), (pvs_moves, 12)])
+def test_search_extension_issue(search, depth):
+    board = Board(16, 16)
+    board.set_state(
+        snake1=Snake(id=1, positions=np.array([[13, 11], [13, 10], [13, 9], [13, 8], [13, 7], [13, 6], [13, 5], [12, 5], [11, 5], [10, 5], [9, 5], [8, 5], [7, 5], [7, 4], [7, 3], [6, 3], [5, 3], [5, 4], [5, 5], [5, 6], [5, 7], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [1, 7], [1, 6], [1, 5], [1, 4], [1, 3], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [3, 7], [4, 7], [4, 6], [4, 5], [4, 4], [4, 3], [4, 2], [4, 1], [5, 1], [6, 1]])),
+        snake2=Snake(id=0, positions=np.array([[10, 14], [9, 14], [8, 14], [8, 13], [8, 12], [8, 11], [9, 11], [9, 10], [9, 9], [9, 8], [9, 7], [8, 7], [8, 6], [7, 6], [6, 6], [6, 7], [7, 7], [7, 8], [8, 8], [8, 9], [8, 10], [7, 10], [7, 11], [6, 11], [5, 11], [4, 11], [4, 12], [3, 12], [2, 12], [1, 12], [1, 13], [2, 13], [3, 13]])),
+        candies=[np.array([12, 12]), np.array([10, 5]), np.array([10, 15])]
+    )
+
+    moves = search(board, depth=depth, eval_fun=best.evaluate)
+
+    assert best_move(moves) in (Move.LEFT, Move.UP)
+
+
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 16)])
 def test_computation_time(search, depth):
     eval_fun = candy_dist.evaluate

@@ -58,18 +58,21 @@ def pvs(
         eval_fun: callable,
         move_history: Dict
 ) -> float:
+    if board.count_moves(player=player) == 1:
+        depth += 1
+
     if depth == 0:
         return eval_fun(board, player=player)
 
-    # suicide
+    # what if we suicide?
     if player == 1:
-        alpha = inf if board.player1_length > 2 * board.player2_length else alpha
+        if board.player1_length > 2 * board.player2_length:
+            return inf
     else:
-        alpha = inf if board.player2_length > 2 * board.player1_length else alpha
+        if board.player2_length > 2 * board.player1_length:
+            return 999999
 
-    if alpha == inf:
-        return alpha
-    elif not board.can_move(player):
+    if not board.can_move(player):
         return -999999
 
     board_hash = board.approx_hash()

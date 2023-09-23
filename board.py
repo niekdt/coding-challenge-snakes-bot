@@ -144,7 +144,7 @@ class Board:
 
     def is_empty_pos(self, pos: Pos) -> bool:
         return self.player2_head + self.player2_length <= \
-            self.grid[pos] <= \
+            int(self.grid[pos]) <= \
             self.player1_head - self.player1_length
 
     def is_empty(self, value: int) -> bool:
@@ -186,10 +186,10 @@ class Board:
         lb = self.player2_head + self.player2_length
         ub = self.player1_head - self.player1_length
 
-        return lb <= self.grid[x - 1, y] <= ub or \
-            lb <= self.grid[x + 1, y] <= ub or \
-            lb <= self.grid[x, y + 1] <= ub or \
-            lb <= self.grid[x, y - 1] <= ub
+        return lb <= int(self.grid[x - 1, y]) <= ub or \
+            lb <= int(self.grid[x + 1, y]) <= ub or \
+            lb <= int(self.grid[x, y + 1]) <= ub or \
+            lb <= int(self.grid[x, y - 1]) <= ub
 
     def count_moves(self, player: int) -> int:
         x, y = self.player1_pos if player == 1 else self.player2_pos
@@ -199,10 +199,10 @@ class Board:
 
         return sum(
             (
-                lb <= self.grid[x - 1, y] <= ub,
-                lb <= self.grid[x + 1, y] <= ub,
-                lb <= self.grid[x, y + 1] <= ub,
-                lb <= self.grid[x, y - 1] <= ub
+                lb <= int(self.grid[x - 1, y]) <= ub,
+                lb <= int(self.grid[x + 1, y]) <= ub,
+                lb <= int(self.grid[x, y + 1]) <= ub,
+                lb <= int(self.grid[x, y - 1]) <= ub
             )
         )
 
@@ -210,7 +210,7 @@ class Board:
         move_dir = MOVE_TO_DIRECTION[move]
         lb = self.player2_head + self.player2_length
         ub = self.player1_head - self.player1_length
-        return lb <= self.grid[pos[0] + move_dir[0], pos[1] + move_dir[1]] <= ub
+        return lb <= int(self.grid[pos[0] + move_dir[0], pos[1] + move_dir[1]]) <= ub
 
     def can_player1_do_move(self, move: Move) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -234,10 +234,10 @@ class Board:
         ub = self.player1_head - self.player1_length
 
         can_moves = (
-            lb <= self.grid[x - 1, y] <= ub,
-            lb <= self.grid[x + 1, y] <= ub,
-            lb <= self.grid[x, y + 1] <= ub,
-            lb <= self.grid[x, y - 1] <= ub
+            lb <= int(self.grid[x - 1, y]) <= ub,
+            lb <= int(self.grid[x + 1, y]) <= ub,
+            lb <= int(self.grid[x, y + 1]) <= ub,
+            lb <= int(self.grid[x, y - 1]) <= ub
         )
 
         return list(compress(ALL_MOVES, can_moves))  # faster than tuple() AND list comprehension

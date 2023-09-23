@@ -63,7 +63,6 @@ class Board:
             pad_width=1,
             constant_values=10000
         )
-        self.candy_mask: ndarray = np.full(self.grid.shape, fill_value=False, dtype=bool)
         self.candies: List[Pos] = list()
         self.player1_pos: Pos = (-2, -2)
         self.player2_pos: Pos = (-2, -2)
@@ -92,7 +91,6 @@ class Board:
 
         # clear grid
         self.grid[1:-1, 1:-1] = 0
-        self.candy_mask.fill(False)
         self.candies.clear()
 
         # clear move stacks
@@ -121,13 +119,10 @@ class Board:
             self._spawn_candy(tuple(pos + POS_OFFSET))
 
     def _spawn_candy(self, pos: Pos) -> None:
-        assert min(pos) > 0
         self.candies.append(pos)
-        self.candy_mask[pos] = True
 
     def _remove_candy(self, pos: Pos) -> None:
         self.candies.remove(pos)
-        self.candy_mask[pos] = False
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -140,7 +135,7 @@ class Board:
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
 
     def is_candy_pos(self, pos: Pos) -> bool:
-        return self.candy_mask[pos]
+        return pos in self.candies
 
     def is_empty_pos(self, pos: Pos) -> bool:
         return self.player2_head + self.player2_length <= \
@@ -173,9 +168,6 @@ class Board:
             return self.get_player1_mask()
         else:
             return self.get_player2_mask()
-
-    def get_candy_mask(self) -> ndarray:
-        return self.candy_mask.view()
 
     def has_candy(self) -> bool:
         return len(self.candies) > 0
@@ -311,7 +303,6 @@ class Board:
         self.player1_pos = board.player1_pos
         self.player2_pos = board.player2_pos
         np.copyto(self.grid, board.grid, casting='no')
-        np.copyto(self.candy_mask, board.candy_mask, casting='no')
 
         self.player1_length = board.player1_length
         self.player2_length = board.player2_length
@@ -339,20 +330,19 @@ class Board:
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
             np.array_equal(self.grid, other.grid) and \
-            np.array_equal(self.candy_mask, other.candy_mask) and \
             self.move_pos_stack == other.move_pos_stack and \
             self.move_head_stack == other.move_head_stack and \
             self.move_candy_stack == other.move_candy_stack
 
     def __hash__(self) -> int:
         """Hash of the exact game state. Not cached!"""
-        return hash((_hash_np(self.grid), _hash_np(self.candy_mask), self.last_player))
+        return hash((_hash_np(self.grid), tuple(self.candies), self.last_player))
 
     def approx_hash(self) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
         return hash((
             _hash_np(self.get_empty_mask()),
-            _hash_np(self.candy_mask),
+            tuple(self.candies),
             self.player1_pos,
             self.player2_pos,
             self.last_player
@@ -369,7 +359,8 @@ class Board:
         str_grid[0:, (0, -1), ] = '-'
         str_grid[(0, -1), 0:] = '|'
         str_grid[(0, 0, -1, -1), (0, -1, -1, 0)] = '+'
-        str_grid[self.get_candy_mask()] = '*'
+        for x, y in self.candies:
+            str_grid[x, y] = '*'
         if self.player1_length > 0:
             str_grid[self.player1_pos] = 'A'
             str_grid[self.player2_pos] = 'B'

@@ -88,10 +88,9 @@ def test_spawn_candy():
     b = Board(3, 2)
     b0 = b.copy()
     assert not b.has_candy()
-    assert not b.candy_mask[(1, 2)]
     b._spawn_candy((1, 2))
     assert b.has_candy()
-    assert b.candy_mask[(1, 2)]
+    assert b.is_candy_pos((1, 2))
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
@@ -104,24 +103,11 @@ def test_remove_candy():
     b0 = b.copy()
     b._remove_candy((1, 2))
     assert not b.has_candy()
-    assert not b.candy_mask[(1, 2)]
+    assert not b.is_candy_pos((1, 2))
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
     assert b.wall_hash() == b0.wall_hash()
-
-
-def test_get_candy_mask():
-    b = Board(3, 2)
-    assert b.grid.shape == b.candy_mask.shape
-    ref_mask = np.full(b.grid.shape, fill_value=False)
-    assert np.array_equal(b.get_candy_mask(), ref_mask)
-    candy_pos = (1, 1)
-    b._spawn_candy(candy_pos)
-
-    ref_mat = np.full(b.grid.shape, fill_value=False)
-    ref_mat[tuple(candy_pos)] = True
-    assert np.array_equal(b.get_candy_mask(), ref_mat)
 
 
 def test_is_candy_pos():

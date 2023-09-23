@@ -7,10 +7,10 @@ from snakes.constants import Move
 
 
 def pvs_moves(
-        board: Board,
-        depth: int,
-        eval_fun: callable,
-        move_history: Dict = MOVE_HISTORY
+    board: Board,
+    depth: int,
+    eval_fun: callable,
+    move_history: Dict = MOVE_HISTORY
 ) -> Dict[Move, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
@@ -33,7 +33,8 @@ def pvs_moves(
             board,
             my_move=Move.LEFT,
             opponent_move=move,
-            depth=depth - 1,
+            depth_left=depth - 1,
+            depth=1,
             player=-1,
             alpha=-beta,
             beta=-alpha,
@@ -55,6 +56,7 @@ def pvs(
         board: Board,
         my_move: Move,
         opponent_move: Move,
+        depth_left: int,
         depth: int,
         player: int,
         alpha: float,
@@ -62,10 +64,10 @@ def pvs(
         eval_fun: callable,
         move_history: Dict
 ) -> float:
-    if board.count_moves(player=player) == 1:
-        depth += 1
+    if depth_left <= 0 and board.count_moves(player=player) == 1:
+        depth_left += 2
 
-    if depth == 0:
+    if depth_left == 0 or depth == 32:
         return eval_fun(board, player=player)
 
     # what if we suicide?
@@ -97,7 +99,8 @@ def pvs(
         board,
         my_move=opponent_move,
         opponent_move=move,
-        depth=depth - 1,
+        depth_left=depth_left - 1,
+        depth=depth + 1,
         player=-player,
         alpha=-beta,
         beta=-alpha,
@@ -118,7 +121,8 @@ def pvs(
             board,
             my_move=opponent_move,
             opponent_move=move,
-            depth=depth - 1,
+            depth_left=depth_left - 1,
+            depth=depth + 1,
             player=-player,
             alpha=-alpha - 1,
             beta=-alpha,
@@ -131,7 +135,8 @@ def pvs(
                 board,
                 my_move=opponent_move,
                 opponent_move=move,
-                depth=depth - 1,
+                depth_left=depth_left - 1,
+                depth=depth + 1,
                 player=-player,
                 alpha=-beta,
                 beta=-alpha,

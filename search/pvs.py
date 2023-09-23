@@ -97,10 +97,10 @@ def pvs(
             return 2 << 29
     else:
         if board.player2_length > 2 * board.player1_length:
-            return 999999
+            return 2 << 29
 
     if not board.can_move(player):
-        return -2 << 30 if player == 1 else -999999
+        return -2 << 30
 
     board_hash = hash(board)
     move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[my_move])

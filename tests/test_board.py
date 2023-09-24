@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from ..board import Board, as_move
+from ..board import Board, as_move, count_free_space_dfs, count_free_space_bfs
 from ....constants import Move, MOVE_VALUE_TO_DIRECTION, MOVES
 from ....snake import Snake
 
@@ -376,3 +376,101 @@ def test_set_state_candy():
 @pytest.mark.parametrize('move', MOVES)
 def test_as_move(move):
     assert as_move(MOVE_VALUE_TO_DIRECTION[move]) == move
+
+
+@pytest.mark.parametrize('size', [2, 3, 5])
+@pytest.mark.parametrize('lb', [1, 2, 3, 5, 10])
+def test_count_free_space_dfs(size, lb):
+    mask = np.pad(
+        np.full((size, size), fill_value=True),
+        pad_width=1,
+        constant_values=False
+    )
+
+    # test without lb
+    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+    assert space == size ** 2
+
+    # test with lb
+    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+    assert space >= min(lb, size ** 2)
+
+    # insert wall
+    mask = np.pad(
+        np.full((size, size), fill_value=True),
+        pad_width=1,
+        constant_values=False
+    )
+    mask[(2, 1)] = False
+    mask[(2, 2)] = False
+    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+    assert space == size ** 2 - 2
+
+    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+    assert space >= min(lb, size ** 2 - 2)
+
+    if size >= 3:
+        # insert void
+        mask = np.pad(
+            np.full((size, size), fill_value=True),
+            pad_width=1,
+            constant_values=False
+        )
+        mask[2:] = False
+        space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+        assert space == size
+        space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+        assert space >= min(lb, size)
+
+
+@pytest.mark.parametrize('size', [2, 3, 4, 5])
+@pytest.mark.parametrize('lb', [10, 5, 3, 2, 1])
+def test_count_free_space_bfs(size, lb):
+    mask = np.pad(
+        np.full((size, size), fill_value=True),
+        pad_width=1,
+        constant_values=False
+    )
+
+    # test without restrictions
+    space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=1000)
+    assert space == size ** 2
+
+    # test with lb
+    space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=lb)
+    assert min(lb, size ** 2) <= space <= size ** 2
+
+    if size >= 3:
+        # insert void
+        mask = np.pad(
+            np.full((size, size), fill_value=True),
+            pad_width=1,
+            constant_values=False
+        )
+        mask[2:] = False
+        space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=1000)
+        assert space == size
+        space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=lb)
+        assert space >= min(lb, size)
+
+
+@pytest.mark.parametrize('size', [15])
+@pytest.mark.parametrize('max_dist', [1, 2, 3, 4, 5])
+@pytest.mark.parametrize('lb', [10, 5, 3, 2, 1])
+def test_count_free_space_bfs_dist(size, max_dist, lb):
+    mask = np.pad(
+        np.full((size, size), fill_value=True),
+        pad_width=1,
+        constant_values=False
+    )
+
+    def max_area(d):
+        return 2 * (d + 1) ** 2 - 2 * (d + 1) + 1
+
+    center = (int(size / 2) + 1, int(size / 2) + 1)
+    space = count_free_space_bfs(mask=mask.copy(), pos=center, max_dist=max_dist, lb=1000)
+    assert space == min(size ** 2, max_area(max_dist))
+
+    # test with lb
+    space2 = count_free_space_bfs(mask=mask.copy(), pos=center, max_dist=max_dist, lb=lb)
+    assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))

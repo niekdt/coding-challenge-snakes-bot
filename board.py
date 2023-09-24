@@ -298,6 +298,13 @@ class Board:
 
         self.last_player = -self.last_player
 
+    def scan_free_space_solo(self, pos: Pos, max_dist: int) -> int:
+        np.copyto(self.get_empty_mask(), self.tmp_grid_mask, casting='no')
+        free_space = self.is_empty_pos(pos)
+
+        if self.is_empty_pos((pos[0], pos[1])):
+            free_space += self.scan_free_space_solo(pos)
+
     def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
         self.player1_pos = board.player1_pos
@@ -404,3 +411,58 @@ def player_num(player) -> int:
 
 def _hash_np(x) -> int:
     return hash(x.data.tobytes())
+
+
+def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int:
+    mask[pos] = False
+    free_space = 0
+    queue: Deque[Pos] = deque(maxlen=max_dist * 4)
+    dqueue: Deque[int] = deque(maxlen=max_dist * 4)
+    queue.append(pos)
+    dqueue.append(0)
+
+    while queue and free_space < lb:
+        cur_pos = queue.popleft()
+        cur_dist = dqueue.popleft()
+        free_space += 1
+        mask[cur_pos[0], cur_pos[1]] = False
+
+        if cur_dist < max_dist:
+            candidate_positions = (
+                (cur_pos[0] - 1, cur_pos[1]),
+                (cur_pos[0] + 1, cur_pos[1]),
+                (cur_pos[0], cur_pos[1] - 1),
+                (cur_pos[0], cur_pos[1] + 1)
+            )
+            free_mask = [mask[p] for p in candidate_positions]
+            new_positions = list(compress(candidate_positions, free_mask))
+            for p in new_positions:
+                mask[p] = False
+            queue.extend(new_positions)
+            dqueue.extend([cur_dist + 1] * len(new_positions))
+
+    return free_space
+
+
+def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
+    """
+    Compute a lower bound on the amount of free space
+    :param mask: Padded logical matrix
+    :param pos: Position to scan from (inclusive)
+    :param lb: Count at least `lb` number of free spaces, if possible
+    :return: Counted free space
+    """
+    assert mask[pos], 'position is not empty'
+    mask[pos] = False
+    if lb == 0:
+        return int(mask[pos])
+
+    candidate_positions = (
+        (pos[0] - 1, pos[1]),
+        (pos[0] + 1, pos[1]),
+        (pos[0], pos[1] - 1),
+        (pos[0], pos[1] + 1)
+    )
+
+    return 1 + sum([count_free_space_dfs(mask, pos=p, lb=lb - 1) for p in candidate_positions if mask[p]])
+

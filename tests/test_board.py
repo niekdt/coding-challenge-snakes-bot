@@ -1,10 +1,11 @@
 import itertools
+from typing import Tuple
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from ..board import Board, as_move, count_free_space_dfs, count_free_space_bfs
+from ..board import Board, as_move, count_free_space_dfs, count_free_space_bfs, count_move_partitions
 from ....constants import Move, MOVE_VALUE_TO_DIRECTION, MOVES
 from ....snake import Snake
 
@@ -474,3 +475,75 @@ def test_count_free_space_bfs_dist(size, max_dist, lb):
     # test with lb
     space2 = count_free_space_bfs(mask=mask.copy(), pos=center, max_dist=max_dist, lb=lb)
     assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))
+
+
+def shift(x: Tuple, n: int) -> Tuple:
+    return x[n:] + x[:n]
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('tl', [False, True])
+@pytest.mark.parametrize('tr', [False, True])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m1_forced(offset, tl, tr, br, bl):
+    assert count_move_partitions(
+        shift((tl, False, tr, True, br, False, bl, False), offset)
+    ) == 1
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('tl', [False, True])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m2_uni(offset, tl, br, bl):
+    assert count_move_partitions(
+        shift((tl, True, True, True, br, False, bl, False), offset)
+    ) == 1
+
+
+@pytest.mark.parametrize('v', [False, True])
+@pytest.mark.parametrize('tl', [False, True])
+@pytest.mark.parametrize('tr', [False, True])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m2_bump(v, tl, tr, br, bl):
+    assert count_move_partitions((tl, v, tr, not v, br, v, bl, not v)) == 2
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('tl', [False, True])
+@pytest.mark.parametrize('tr', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m2_corner(offset, tl, tr, bl):
+    assert count_move_partitions(
+        shift((tl, False, tr, True, False, True, bl, False), offset)
+    ) == 2
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m3_uni(offset, br, bl):
+    assert count_move_partitions(
+        shift((True, True, True, True, br, False, bl, True), offset)
+    ) == 1
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('left', [False, True])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m3_tunnel(offset, left, br, bl):
+    assert count_move_partitions(
+        shift((left, True, not left, True, br, False, bl, True), offset)
+    ) == 2
+
+
+@pytest.mark.parametrize('offset', [0, 2, 4, 6])
+@pytest.mark.parametrize('br', [False, True])
+@pytest.mark.parametrize('bl', [False, True])
+def test_count_move_partitions_m3_tri(offset, br, bl):
+    assert count_move_partitions(
+        shift((False, True, False, True, br, False, bl, True), offset)
+    ) == 3

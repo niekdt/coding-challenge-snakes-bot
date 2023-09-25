@@ -142,6 +142,39 @@ class Board:
             int(self.grid[pos]) <= \
             self.player1_head - self.player1_length
 
+    def is_player_forced(self, player: int) -> bool:
+        x, y = self.player1_pos if player == 1 else self.player2_pos
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+
+        return sum(
+            (
+                lb <= int(self.grid[x - 1, y]) <= ub,
+                lb <= int(self.grid[x + 1, y]) <= ub,
+                lb <= int(self.grid[x, y + 1]) <= ub,
+                lb <= int(self.grid[x, y - 1]) <= ub
+            )
+        ) == 1
+
+    def count_player_move_partitions(self, player: int) -> int:
+        x, y = self.player1_pos if player == 1 else self.player2_pos
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+
+        # Start from top-left, clockwise
+        cells = (
+            lb <= int(self.grid[x - 1, y + 1]) <= ub,  # TL = 0
+            lb <= int(self.grid[x, y + 1]) <= ub,  # T = 1
+            lb <= int(self.grid[x + 1, y + 1]) <= ub,  # TR = 2
+            lb <= int(self.grid[x + 1, y]) <= ub,  # R = 3
+            lb <= int(self.grid[x + 1, y - 1]) <= ub,  # BR = 4
+            lb <= int(self.grid[x, y - 1]) <= ub,  # B = 5
+            lb <= int(self.grid[x - 1, y - 1]) <= ub,  # BL = 6
+            lb <= int(self.grid[x - 1, y]) <= ub  # L = 7
+        )
+
+        return count_move_partitions(cells)
+
     def is_empty(self, value: int) -> bool:
         return self.player2_head + self.player2_length <= value <= self.player1_head - self.player1_length
 
@@ -298,13 +331,6 @@ class Board:
 
         self.last_player = -self.last_player
 
-    def scan_free_space_solo(self, pos: Pos, max_dist: int) -> int:
-        np.copyto(self.get_empty_mask(), self.tmp_grid_mask, casting='no')
-        free_space = self.is_empty_pos(pos)
-
-        if self.is_empty_pos((pos[0], pos[1])):
-            free_space += self.scan_free_space_solo(pos)
-
     def inherit(self, board: Self) -> None:
         assert self.shape == board.shape, 'boards must be same size'
         self.player1_pos = board.player1_pos
@@ -446,13 +472,12 @@ def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int
 
 def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
     """
-    Compute a lower bound on the amount of free space
+    Compute a lower bound on the amount of free space, including the current position
     :param mask: Padded logical matrix
     :param pos: Position to scan from (inclusive)
     :param lb: Count at least `lb` number of free spaces, if possible
     :return: Counted free space
     """
-    assert mask[pos], 'position is not empty'
     mask[pos] = False
     if lb == 0:
         return int(mask[pos])
@@ -466,3 +491,39 @@ def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
 
     return 1 + sum([count_free_space_dfs(mask, pos=p, lb=lb - 1) for p in candidate_positions if mask[p]])
 
+
+def count_move_partitions(cells: Tuple[bool, ...]) -> int:
+    assert len(cells) == 8
+
+    n_moves = sum((cells[1], cells[3], cells[5], cells[7]))
+    if n_moves == 1:
+        return 1
+    elif n_moves == 2:
+        if cells[1] == cells[5]:
+            # Tunnel case
+            return 2
+        else:
+            # Corner case
+            if cells[3]:  # R
+                if cells[5]:  # B
+                    return 1 if cells[4] else 2
+                else:
+                    return 1 if cells[2] else 2
+            elif cells[5]:  # B
+                return 1 if cells[6] else 2
+            else:  # T
+                return 1 if cells[0] else 2
+    elif n_moves == 3:
+        # find the non-empty move cell
+        if not cells[1]:  # T
+            return 3 - sum((cells[4], cells[6]))
+        elif not cells[3]:  # R
+            return 3 - sum((cells[0], cells[6]))
+        elif not cells[5]:  # B
+            return 3 - sum((cells[0], cells[2]))
+        else:  # L
+            return 3 - sum((cells[2], cells[4]))
+    elif n_moves == 0:
+        return 0
+    else:
+        return 1

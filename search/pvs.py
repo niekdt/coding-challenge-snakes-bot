@@ -12,14 +12,15 @@ def pvs_moves(
         board: Board,
         depth: int,
         eval_fun: callable,
-        move_history: Dict = MOVE_HISTORY
+        move_history: Dict = MOVE_HISTORY,
+        root_moves=ALL_MOVES
 ) -> Dict[Move, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
     board_hash = hash(board)
-    move_order = move_history.get(board_hash, ALL_MOVES)
+    move_order = move_history.get(board_hash, root_moves)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
     alpha = -inf
@@ -32,9 +33,9 @@ def pvs_moves(
         if best_value == -inf and move == moves[-1]:
             if __debug__:
                 print('Skipping last root move evaluation because all other moves sucked')
-            best_move = move
-            best_value = 0
-            break
+            # best_move = move
+            # best_value = 0
+            # break
 
         if __debug__:
             print(f'== Evaluate {move} with alpha={alpha} ==')
@@ -225,4 +226,8 @@ def qsearch(
 
 def is_quiet_node(board: Board) -> bool:
     return distance(board.player1_pos, board.player2_pos) > 2 and \
-        (board.count_moves(player=1) > 1 and board.count_moves(player=2) > 1)
+        board.count_moves(player=1) > 1 and \
+        board.count_moves(player=-1) > 1 and \
+        board.count_player_move_partitions(player=1) <= 1 and \
+        board.count_player_move_partitions(player=-1) <= 1
+

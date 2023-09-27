@@ -11,13 +11,15 @@ from snakes.snake import Snake
 
 @pytest.fixture(autouse=True)
 def cleanup():
+    # warm-up
+    test_play_deep_game(grid=16, seed=1, bot='Snek', max_turns=2)
     gc.collect()
 
 
 @pytest.mark.parametrize('grid', [16])
-@pytest.mark.parametrize('seed', [1, 1, 1, 1, 1, 1, 1, 1])
+@pytest.mark.parametrize('seed', [1] * 8)
 @pytest.mark.parametrize('bot', ['Snek'])
-@pytest.mark.parametrize('max_turns', [42])
+@pytest.mark.parametrize('max_turns', [100])
 def test_play_deep_game(grid, seed, bot, max_turns):
     random.seed(seed)
     grid_size = (grid, grid)
@@ -28,7 +30,7 @@ def test_play_deep_game(grid, seed, bot, max_turns):
     bot_names = [Bot(id=i, grid_size=(1, 1)).name for i, Bot in enumerate(bots)]
     bot_i = int(np.where(np.array(bot_names) == bot)[0])
     agents = {0: bots[bot_i], 1: bots[bot_i]}
-    game = Game(grid_size=grid_size, agents=agents, round_type=RoundType.TURNS, snakes=snakes, candies=[])
+    game = Game(grid_size=grid_size, agents=agents, round_type=RoundType.TURNS, snakes=snakes)
 
     while not game.finished() and game.turns < max_turns:
         game.update()

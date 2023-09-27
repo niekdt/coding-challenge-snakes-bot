@@ -374,11 +374,11 @@ def test_count_free_space_dfs(size, lb):
     )
 
     # test without lb
-    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
     assert space == size ** 2
 
     # test with lb
-    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
     assert space >= min(lb, size ** 2)
 
     # insert wall
@@ -389,10 +389,10 @@ def test_count_free_space_dfs(size, lb):
     )
     mask[(2, 1)] = False
     mask[(2, 2)] = False
-    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
     assert space == size ** 2 - 2
 
-    space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
     assert space >= min(lb, size ** 2 - 2)
 
     if size >= 3:
@@ -403,9 +403,9 @@ def test_count_free_space_dfs(size, lb):
             constant_values=False
         )
         mask[2:] = False
-        space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=1000)
+        space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
         assert space == size
-        space = count_free_space_dfs(mask=mask.copy(), pos=(1, 1), lb=lb)
+        space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
         assert space >= min(lb, size)
 
 
@@ -419,11 +419,11 @@ def test_count_free_space_bfs(size, lb):
     )
 
     # test without restrictions
-    space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=1000)
+    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=1000)
     assert space == size ** 2
 
     # test with lb
-    space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=lb)
+    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=lb)
     assert min(lb, size ** 2) <= space <= size ** 2
 
     if size >= 3:
@@ -434,9 +434,9 @@ def test_count_free_space_bfs(size, lb):
             constant_values=False
         )
         mask[2:] = False
-        space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=1000)
+        space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=1000)
         assert space == size
-        space = count_free_space_bfs(mask=mask.copy(), pos=(1, 1), max_dist=size * 2, lb=lb)
+        space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=lb)
         assert space >= min(lb, size)
 
 
@@ -454,11 +454,11 @@ def test_count_free_space_bfs_dist(size, max_dist, lb):
         return 2 * (d + 1) ** 2 - 2 * (d + 1) + 1
 
     center = (int(size / 2) + 1, int(size / 2) + 1)
-    space = count_free_space_bfs(mask=mask.copy(), pos=center, max_dist=max_dist, lb=1000)
+    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=center, max_dist=max_dist, lb=1000)
     assert space == min(size ** 2, max_area(max_dist))
 
     # test with lb
-    space2 = count_free_space_bfs(mask=mask.copy(), pos=center, max_dist=max_dist, lb=lb)
+    space2 = count_free_space_bfs(mask=mask.copy().tolist(), pos=center, max_dist=max_dist, lb=lb)
     assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))
 
 

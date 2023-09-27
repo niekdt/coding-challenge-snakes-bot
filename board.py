@@ -12,7 +12,7 @@ from ...snake import Snake
 
 Self = TypeVar("Self", bound="Board")
 Pos = Tuple[int, int]
-Grid = Tuple[Tuple[int]]
+Grid = List[List[int]]
 GridMask = List[List[bool]]
 
 
@@ -77,12 +77,8 @@ class Board:
         self.width: int = width
         self.height: int = height
         self.center: Pos = (int(width / 2) + 1, int(height / 2) + 1)
-        self.grid: Grid = as_grid(np.pad(
-            np.zeros([width, height], dtype=int),
-            pad_width=1,
-            constant_values=10000
-        ))
-        self.candies: List[Pos] = list()
+        self.grid = create_grid(width, height)
+        self.candies: List[Pos] = []
         self.player1_pos: Pos = (-2, -2)
         self.player2_pos: Pos = (-2, -2)
         self.player1_head: int = 0
@@ -109,12 +105,9 @@ class Board:
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid
-        # self.grid[1:-1, 1:-1] = 0
-        self.grid = as_grid(np.pad(
-            np.zeros([self.width, self.height], dtype=int),
-            pad_width=1,
-            constant_values=10000
-        ))
+        wall = 10000
+        first_row = [wall] * (self.height + 2)
+        self.grid = create_grid(self.width, self.height)
         self.candies.clear()
 
         # clear move stacks
@@ -201,8 +194,8 @@ class Board:
     def get_player_pos(self, player: int) -> Pos:
         return self.player1_pos if player == 1 else self.player2_pos
 
-    def get_candies(self) -> Tuple[Pos]:
-        return tuple(self.candies)
+    def get_candies(self) -> List[Pos]:
+        return self.candies
 
     def get_empty_mask(self) -> GridMask:
         lb = self.player2_head + self.player2_length
@@ -368,18 +361,20 @@ class Board:
             self.last_player == other.last_player and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
-            set(self.candies) == set(other.candies) and \
+            self.candies == other.candies and \
             self.grid == other.grid
 
     def __hash__(self) -> int:
         """Hash of the exact game state"""
-        return hash((grid_as_tuple(self.grid), tuple(self.candies), self.last_player))
+        return hash((
+            grid_as_tuple(self.grid[1:-1]),
+            self.last_player
+        ))
 
     def approx_hash(self) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
         return hash((
-            grid_as_tuple(self.grid),
-            tuple(self.candies),
+            grid_as_tuple(self.grid[1:-1]),
             self.player1_pos,
             self.player2_pos,
             self.last_player
@@ -429,12 +424,9 @@ def player_num(player) -> int:
     return int(1.5 - player / 2)
 
 
-def _hash_np(x) -> int:
-    return hash(x.data.tobytes())
-
-
-def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int:
-    mask[pos] = False
+def count_free_space_bfs(mask: GridMask, pos: Pos, max_dist: int, lb: int) -> int:
+    assert isinstance(mask, list)
+    mask[pos[0]][pos[1]] = False
     free_space = 0
     queue: Deque[Pos] = deque(maxlen=max_dist * 4)
     dqueue: Deque[int] = deque(maxlen=max_dist * 4)
@@ -445,7 +437,7 @@ def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int
         cur_pos = queue.popleft()
         cur_dist = dqueue.popleft()
         free_space += 1
-        mask[cur_pos[0], cur_pos[1]] = False
+        mask[cur_pos[0]][cur_pos[1]] = False
 
         if cur_dist < max_dist:
             candidate_positions = (
@@ -454,17 +446,17 @@ def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int
                 (cur_pos[0], cur_pos[1] - 1),
                 (cur_pos[0], cur_pos[1] + 1)
             )
-            free_mask = [mask[p] for p in candidate_positions]
+            free_mask = [mask[p[0]][p[1]] for p in candidate_positions]
             new_positions = list(compress(candidate_positions, free_mask))
             for p in new_positions:
-                mask[p] = False
+                mask[p[0]][p[1]] = False
             queue.extend(new_positions)
             dqueue.extend([cur_dist + 1] * len(new_positions))
 
     return free_space
 
 
-def count_free_space_dfs(mask: GridMask, pos: Pos, lb: int):
+def count_free_space_dfs(mask: GridMask, pos: Pos, lb: int, max_dist: int, ref_pos: Pos):
     """
     Compute a lower bound on the amount of free space, including the current position
     :param mask: Padded logical matrix
@@ -472,9 +464,10 @@ def count_free_space_dfs(mask: GridMask, pos: Pos, lb: int):
     :param lb: Count at least `lb` number of free spaces, if possible
     :return: Counted free space
     """
+    if lb == 0 or distance(pos, ref_pos) >= max_dist:
+        return 1
+
     mask[pos[0]][pos[1]] = False
-    if lb == 0:
-        return int(mask[pos[0]][pos[1]])
 
     candidate_positions = (
         (pos[0] - 1, pos[1]),
@@ -483,7 +476,9 @@ def count_free_space_dfs(mask: GridMask, pos: Pos, lb: int):
         (pos[0], pos[1] + 1)
     )
 
-    return 1 + sum([count_free_space_dfs(mask, pos=p, lb=lb - 1) for p in candidate_positions if mask[p[0]][p[1]]])
+    return 1 + sum(
+        [count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, ref_pos=ref_pos) for p in candidate_positions if mask[p[0]][p[1]]]
+    )
 
 
 def count_move_partitions(cells: Tuple[bool, ...]) -> int:
@@ -523,13 +518,15 @@ def count_move_partitions(cells: Tuple[bool, ...]) -> int:
         return 1
 
 
-def as_grid(grid: ndarray) -> Grid:
-    return grid.tolist()
-
-
 def grid_as_tuple(grid: Grid) -> Tuple[Tuple[int]]:
     return tuple([tuple(row) for row in grid])
 
 
 def grid_as_np(grid: Grid) -> ndarray:
     return np.array(grid)
+
+
+def create_grid(width, height) -> Grid:
+    wall = 10000
+    first_row = [wall] * (height + 2)
+    return [first_row] + [[wall] + [0] * height + [wall] for i in range(width)] + [first_row]

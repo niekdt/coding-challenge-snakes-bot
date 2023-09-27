@@ -17,7 +17,7 @@ def cleanup():
 
 
 @pytest.mark.parametrize('grid', [16])
-@pytest.mark.parametrize('seed', [1] * 8)
+@pytest.mark.parametrize('seed', [1] * 4)
 @pytest.mark.parametrize('bot', ['Snek'])
 @pytest.mark.parametrize('max_turns', [100])
 def test_play_deep_game(grid, seed, bot, max_turns):

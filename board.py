@@ -287,9 +287,9 @@ class Board:
 
     # performing a move increments the turn counter and places a new wall
     def perform_move(self, move: BoardMove, player: int) -> None:
+        assert self.last_player != player
         direction = MOVE_TO_DIRECTION[move]
 
-        # TODO remove branching
         if player == 1:
             target_pos = (self.player1_pos[0] + direction[0], self.player1_pos[1] + direction[1])
 
@@ -323,11 +323,9 @@ class Board:
         self.last_player = player
 
     def undo_move(self, player: int) -> None:
-        assert player == self.last_player, 'Last move was performed by the other player'
-
+        assert self.last_player == player
         ate_candy = self.move_candy_stack.pop()
 
-        # TODO remove branching
         if player == 1:
             if ate_candy:
                 self.player1_length -= 1
@@ -352,16 +350,13 @@ class Board:
         return self.width * self.height
 
     def __eq__(self, other) -> bool:
-        return self.width == other.width and \
-            self.height == other.height and \
-            self.player1_head == other.player1_head and \
+        return self.player1_head == other.player1_head and \
             self.player2_head == other.player2_head and \
             self.player1_length == other.player1_length and \
             self.player2_length == other.player2_length and \
             self.last_player == other.last_player and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
-            self.candies == other.candies and \
             self.grid == other.grid
 
     def __hash__(self) -> int:

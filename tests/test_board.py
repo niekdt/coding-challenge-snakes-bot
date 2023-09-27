@@ -94,9 +94,6 @@ def test_spawn_candy():
     assert b.has_candy()
     assert b.is_candy_pos((1, 2))
 
-    assert hash(b) != hash(b0)
-    assert b.approx_hash() != b0.approx_hash()
-
 
 def test_remove_candy():
     b = Board(3, 2)
@@ -105,9 +102,6 @@ def test_remove_candy():
     b._remove_candy((1, 2))
     assert not b.has_candy()
     assert not b.is_candy_pos((1, 2))
-
-    assert hash(b) != hash(b0)
-    assert b.approx_hash() != b0.approx_hash()
 
 
 def test_is_candy_pos():
@@ -340,8 +334,6 @@ def test_set_state_candy():
     )
     assert not b.has_candy()
     assert not b.is_candy_pos((2, 1))
-    assert hash(b) != hash(b1)
-    assert b.approx_hash() != b1.approx_hash()
 
     # two candies
     b.set_state(

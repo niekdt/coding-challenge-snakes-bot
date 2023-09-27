@@ -3,10 +3,13 @@ from typing import Dict
 
 from ..board import Board, MOVES, BoardMove
 
-MOVE_HISTORY: Dict = dict()
 
-
-def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[BoardMove, float]:
+def negamax_moves(
+        board: Board,
+        depth: int,
+        eval_fun: callable,
+        move_history: Dict
+) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
@@ -49,7 +52,7 @@ def negamax_ab_moves(
         board: Board,
         depth: int,
         eval_fun: callable,
-        move_history: Dict = MOVE_HISTORY
+        move_history: Dict
 ) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:

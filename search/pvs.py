@@ -2,7 +2,6 @@ from math import inf
 from typing import Dict, Tuple
 
 from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, distance, BoardMove
-from snakes.bots.niekdt.search.negamax import MOVE_HISTORY
 
 MAX_DEPTH = 32
 
@@ -11,7 +10,7 @@ def pvs_moves(
         board: Board,
         depth: int,
         eval_fun: callable,
-        move_history: Dict = MOVE_HISTORY,
+        move_history: Dict,
         root_moves: Tuple[BoardMove] = MOVES
 ) -> Dict[BoardMove, float]:
     # suicide

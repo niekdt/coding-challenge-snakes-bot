@@ -7,14 +7,13 @@ from snakes.bots.niekdt.search.pvs import pvs_moves
 from ..board import Board, BoardMove
 from ..eval import death, candy_dist, best
 from ..search.choose import best_move, has_single_best_move
-from ..search.negamax import negamax_moves, negamax_ab_moves, MOVE_HISTORY
+from ..search.negamax import negamax_moves, negamax_ab_moves
 from ....snake import Snake
 
 
 @pytest.fixture(autouse=True)
 def cleanup():
     gc.collect()
-    MOVE_HISTORY.clear()
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3])
@@ -27,7 +26,7 @@ def test_forced_move(depth, search):
         candies=[]
     )
 
-    moves = search(board, depth=depth, eval_fun=death.evaluate)
+    moves = search(board, depth=depth, eval_fun=death.evaluate, move_history=dict())
     assert len(moves) == 1
     assert BoardMove.DOWN in moves
     assert moves[BoardMove.DOWN] == 0
@@ -61,7 +60,7 @@ def test_goto_candy(depth, search, size):
         candies=[np.array((size - 1, 1))]
     )
 
-    moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
+    moves = search(board, depth=depth, eval_fun=candy_dist.evaluate, move_history=dict())
 
     assert has_single_best_move(moves)
     assert best_move(moves) == BoardMove.RIGHT
@@ -77,7 +76,7 @@ def test_goto_candy_far(depth, search):
         candies=[np.array((0, 12)), np.array((1, 9)), np.array((4, 2))]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
     print(moves)
 
     assert best_move(moves) in [BoardMove.LEFT, BoardMove.UP]
@@ -95,7 +94,7 @@ def test_goto_candy_near(depth, search):
         candies=[np.array((6, 14)), np.array((7, 14)), np.array((6, 9))]
     )
 
-    moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
+    moves = search(board, depth=depth, eval_fun=candy_dist.evaluate, move_history=dict())
     print(moves)
 
     assert best_move(moves) == BoardMove.RIGHT
@@ -115,7 +114,7 @@ def test_goto_candy_near2(depth, search):
         candies=[np.array((2, 2)), np.array((14, 8))]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
 
     assert best_move(moves) in (BoardMove.LEFT, BoardMove.UP)
 
@@ -136,7 +135,7 @@ def test_search_extension_issue(search, depth):
         candies=[np.array([12, 12]), np.array([10, 5]), np.array([10, 15])]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
 
     # unclear which move is best, but RIGHT is not picked due to pruning
     assert best_move(moves) in (BoardMove.LEFT, BoardMove.UP)
@@ -156,7 +155,7 @@ def test_trap8(search, depth):
         candies=[np.array([2, 9]), np.array([4, 10]), np.array([4, 9])]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
     print(moves)
 
     assert best_move(moves) == BoardMove.RIGHT
@@ -176,7 +175,7 @@ def test_wall_search(search, depth):
              [6, 11], [6, 10], [6, 9], [6, 8], [6, 7], [6, 6], [6, 5]])),
         candies=[np.array([2, 9]), np.array([4, 10]), np.array([4, 9])]
     )
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
 
     assert best_move(moves) == BoardMove.DOWN
 
@@ -198,7 +197,7 @@ def test_follow_tail(search, depth):
         candies=[]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
     assert moves[BoardMove.UP] > -10 ** 5
 
 
@@ -213,7 +212,7 @@ def test_losing_position_gap(search, depth):
         candies=[]
     )
 
-    moves = search(board, depth=depth, eval_fun=best.evaluate)
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
     assert BoardMove.UP in moves
     assert BoardMove.LEFT in moves
     assert BoardMove.RIGHT in moves
@@ -231,4 +230,4 @@ def test_computation_time(search, depth):
     )
     print(board)
 
-    search(board, depth=depth, eval_fun=candy_dist.evaluate)
+    search(board, depth=depth, eval_fun=candy_dist.evaluate, move_history=dict())

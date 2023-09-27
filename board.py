@@ -12,6 +12,8 @@ from ...snake import Snake
 
 Self = TypeVar("Self", bound="Board")
 Pos = Tuple[int, int]
+Grid = Tuple[Tuple[int]]
+GridMask = List[List[bool]]
 
 
 class BoardMove(IntEnum):
@@ -75,11 +77,11 @@ class Board:
         self.width: int = width
         self.height: int = height
         self.center: Pos = (int(width / 2) + 1, int(height / 2) + 1)
-        self.grid: ndarray = np.pad(
+        self.grid: Grid = as_grid(np.pad(
             np.zeros([width, height], dtype=int),
             pad_width=1,
             constant_values=10000
-        )
+        ))
         self.candies: List[Pos] = list()
         self.player1_pos: Pos = (-2, -2)
         self.player2_pos: Pos = (-2, -2)
@@ -107,7 +109,12 @@ class Board:
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid
-        self.grid[1:-1, 1:-1] = 0
+        # self.grid[1:-1, 1:-1] = 0
+        self.grid = as_grid(np.pad(
+            np.zeros([self.width, self.height], dtype=int),
+            pad_width=1,
+            constant_values=10000
+        ))
         self.candies.clear()
 
         # clear move stacks
@@ -122,11 +129,11 @@ class Board:
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
-            self.grid[pos[0] + 1, pos[1] + 1] = self.player1_head - i
+            self.grid[pos[0] + 1][pos[1] + 1] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
-            self.grid[pos[0] + 1, pos[1] + 1] = self.player2_head + i
+            self.grid[pos[0] + 1][pos[1] + 1] = self.player2_head + i
 
         self.player1_pos = tuple(snake1.positions[0] + POS_OFFSET)
         self.player2_pos = tuple(snake2.positions[0] + POS_OFFSET)
@@ -145,9 +152,6 @@ class Board:
     def shape(self) -> Tuple[int, int]:
         return self.width, self.height
 
-    def count_free_space(self) -> int:
-        return self.get_empty_mask().sum()
-
     def is_valid_pos(self, pos: Pos) -> bool:
         return 0 <= pos[0] < self.width and 0 <= pos[1] < self.height
 
@@ -155,9 +159,8 @@ class Board:
         return pos in self.candies
 
     def is_empty_pos(self, pos: Pos) -> bool:
-        return self.player2_head + self.player2_length <= \
-            int(self.grid[pos]) <= \
-            self.player1_head - self.player1_length
+        return self.player2_head + self.player2_length <= self.grid[pos[0]][
+            pos[1]] <= self.player1_head - self.player1_length
 
     def is_player_forced(self, player: int) -> bool:
         x, y = self.player1_pos if player == 1 else self.player2_pos
@@ -166,10 +169,10 @@ class Board:
 
         return sum(
             (
-                lb <= int(self.grid[x - 1, y]) <= ub,
-                lb <= int(self.grid[x + 1, y]) <= ub,
-                lb <= int(self.grid[x, y + 1]) <= ub,
-                lb <= int(self.grid[x, y - 1]) <= ub
+                lb <= self.grid[x - 1][y] <= ub,
+                lb <= self.grid[x + 1][y] <= ub,
+                lb <= self.grid[x][y + 1] <= ub,
+                lb <= self.grid[x][y - 1] <= ub
             )
         ) == 1
 
@@ -180,14 +183,14 @@ class Board:
 
         # Start from top-left, clockwise
         cells = (
-            lb <= int(self.grid[x - 1, y + 1]) <= ub,  # TL = 0
-            lb <= int(self.grid[x, y + 1]) <= ub,  # T = 1
-            lb <= int(self.grid[x + 1, y + 1]) <= ub,  # TR = 2
-            lb <= int(self.grid[x + 1, y]) <= ub,  # R = 3
-            lb <= int(self.grid[x + 1, y - 1]) <= ub,  # BR = 4
-            lb <= int(self.grid[x, y - 1]) <= ub,  # B = 5
-            lb <= int(self.grid[x - 1, y - 1]) <= ub,  # BL = 6
-            lb <= int(self.grid[x - 1, y]) <= ub  # L = 7
+            lb <= self.grid[x - 1][y + 1] <= ub,  # TL = 0
+            lb <= self.grid[x][y + 1] <= ub,  # T = 1
+            lb <= self.grid[x + 1][y + 1] <= ub,  # TR = 2
+            lb <= self.grid[x + 1][y] <= ub,  # R = 3
+            lb <= self.grid[x + 1][y - 1] <= ub,  # BR = 4
+            lb <= self.grid[x][y - 1] <= ub,  # B = 5
+            lb <= self.grid[x - 1][y - 1] <= ub,  # BL = 6
+            lb <= self.grid[x - 1][y] <= ub  # L = 7
         )
 
         return count_move_partitions(cells)
@@ -201,19 +204,20 @@ class Board:
     def get_candies(self) -> Tuple[Pos]:
         return tuple(self.candies)
 
-    def get_empty_mask(self) -> ndarray:
-        return np.logical_and(
-            self.player2_head + self.player2_length <= self.grid,
-            self.grid <= self.player1_head - self.player1_length
-        )
+    def get_empty_mask(self) -> GridMask:
+        lb = self.player2_head + self.player2_length
+        ub = self.player1_head - self.player1_length
+        return [[lb <= v <= ub for v in row] for row in self.grid]
 
-    def get_player1_mask(self) -> ndarray:
-        return self.grid > self.player1_head - self.player1_length
+    def get_player1_mask(self) -> GridMask:
+        ub = self.player1_head - self.player1_length
+        return [[v > ub for v in row] for row in self.grid]
 
-    def get_player2_mask(self) -> ndarray:
-        return self.grid < self.player2_head + self.player2_length
+    def get_player2_mask(self) -> GridMask:
+        lb = self.player2_head + self.player2_length
+        return [[v < lb for v in row] for row in self.grid]
 
-    def get_player_mask(self, player: int) -> ndarray:
+    def get_player_mask(self, player: int) -> GridMask:
         if player == 1:
             return self.get_player1_mask()
         else:
@@ -228,10 +232,10 @@ class Board:
         lb = self.player2_head + self.player2_length
         ub = self.player1_head - self.player1_length
 
-        return lb <= int(self.grid[x - 1, y]) <= ub or \
-            lb <= int(self.grid[x + 1, y]) <= ub or \
-            lb <= int(self.grid[x, y + 1]) <= ub or \
-            lb <= int(self.grid[x, y - 1]) <= ub
+        return lb <= self.grid[x - 1][y] <= ub or \
+            lb <= self.grid[x + 1][y] <= ub or \
+            lb <= self.grid[x][y + 1] <= ub or \
+            lb <= self.grid[x][y - 1] <= ub
 
     def count_moves(self, player: int) -> int:
         x, y = self.player1_pos if player == 1 else self.player2_pos
@@ -241,10 +245,10 @@ class Board:
 
         return sum(
             (
-                lb <= int(self.grid[x - 1, y]) <= ub,
-                lb <= int(self.grid[x + 1, y]) <= ub,
-                lb <= int(self.grid[x, y + 1]) <= ub,
-                lb <= int(self.grid[x, y - 1]) <= ub
+                lb <= self.grid[x - 1][y] <= ub,
+                lb <= self.grid[x + 1][y] <= ub,
+                lb <= self.grid[x][y + 1] <= ub,
+                lb <= self.grid[x][y - 1] <= ub
             )
         )
 
@@ -252,7 +256,7 @@ class Board:
         move_dir = MOVE_TO_DIRECTION[move]
         lb = self.player2_head + self.player2_length
         ub = self.player1_head - self.player1_length
-        return lb <= int(self.grid[pos[0] + move_dir[0], pos[1] + move_dir[1]]) <= ub
+        return lb <= self.grid[pos[0] + move_dir[0]][pos[1] + move_dir[1]] <= ub
 
     def can_player1_do_move(self, move: BoardMove) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -276,10 +280,10 @@ class Board:
         ub = self.player1_head - self.player1_length
 
         can_moves = (
-            lb <= int(self.grid[x - 1, y]) <= ub,
-            lb <= int(self.grid[x + 1, y]) <= ub,
-            lb <= int(self.grid[x, y + 1]) <= ub,
-            lb <= int(self.grid[x, y - 1]) <= ub
+            lb <= self.grid[x - 1][y] <= ub,
+            lb <= self.grid[x + 1][y] <= ub,
+            lb <= self.grid[x][y + 1] <= ub,
+            lb <= self.grid[x][y - 1] <= ub
         )
 
         return list(compress(MOVES, can_moves))  # faster than tuple() AND list comprehension
@@ -300,10 +304,10 @@ class Board:
             ate_candy = self.is_candy_pos(target_pos)
             self.move_candy_stack.append(ate_candy)
             self.move_pos_stack.append(self.player1_pos)
-            self.move_head_stack.append(self.grid[target_pos])
+            self.move_head_stack.append(self.grid[target_pos[0]][target_pos[1]])
             self.player1_pos = target_pos
             self.player1_head += 1
-            self.grid[self.player1_pos] = self.player1_head
+            self.grid[self.player1_pos[0]][self.player1_pos[1]] = self.player1_head
 
             if ate_candy:
                 self.player1_length += 1
@@ -315,10 +319,10 @@ class Board:
             ate_candy = self.is_candy_pos(target_pos)
             self.move_candy_stack.append(ate_candy)
             self.move_pos_stack.append(self.player2_pos)
-            self.move_head_stack.append(self.grid[target_pos])
+            self.move_head_stack.append(self.grid[target_pos[0]][target_pos[1]])
             self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
-            self.grid[self.player2_pos] = self.player2_head
+            self.grid[self.player2_pos[0]][self.player2_pos[1]] = self.player2_head
             if ate_candy:
                 self.player2_length += 1
                 self._remove_candy(self.player2_pos)
@@ -335,32 +339,18 @@ class Board:
             if ate_candy:
                 self.player1_length -= 1
                 self._spawn_candy(self.player1_pos)
-            self.grid[self.player1_pos] = self.move_head_stack.pop()
+            self.grid[self.player1_pos[0]][self.player1_pos[1]] = self.move_head_stack.pop()
             self.player1_pos = self.move_pos_stack.pop()
             self.player1_head -= 1
         else:
             if ate_candy:
                 self.player2_length -= 1
                 self._spawn_candy(self.player2_pos)
-            self.grid[self.player2_pos] = self.move_head_stack.pop()
+            self.grid[self.player2_pos[0]][self.player2_pos[1]] = self.move_head_stack.pop()
             self.player2_pos = self.move_pos_stack.pop()
             self.player2_head += 1
 
         self.last_player = -self.last_player
-
-    def inherit(self, board: Self) -> None:
-        assert self.shape == board.shape, 'boards must be same size'
-        self.player1_pos = board.player1_pos
-        self.player2_pos = board.player2_pos
-        np.copyto(self.grid, board.grid, casting='no')
-
-        self.player1_length = board.player1_length
-        self.player2_length = board.player2_length
-        self.player1_head = board.player1_head
-        self.player2_head = board.player2_head
-        self.move_pos_stack = board.move_pos_stack.copy()
-        self.move_head_stack = board.move_head_stack.copy()
-        self.move_candy_stack = board.move_candy_stack.copy()
 
     def copy(self) -> Self:
         return deepcopy(self)
@@ -379,30 +369,26 @@ class Board:
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
             set(self.candies) == set(other.candies) and \
-            np.array_equal(self.grid, other.grid)
+            self.grid == other.grid
 
     def __hash__(self) -> int:
         """Hash of the exact game state"""
-        return hash((_hash_np(self.grid), tuple(self.candies), self.last_player))
+        return hash((grid_as_tuple(self.grid), tuple(self.candies), self.last_player))
 
     def approx_hash(self) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
         return hash((
-            _hash_np(self.get_empty_mask()),
+            grid_as_tuple(self.grid),
             tuple(self.candies),
             self.player1_pos,
             self.player2_pos,
             self.last_player
         ))
 
-    def wall_hash(self) -> int:
-        """Hash of the game state only considering blocked cells on the grid"""
-        return _hash_np(self.get_empty_mask())
-
     def __str__(self) -> str:
-        str_grid = np.full(self.grid.shape, fill_value='_', dtype=str)
-        str_grid[self.get_player1_mask()] = 'a'
-        str_grid[self.get_player2_mask()] = 'b'
+        str_grid = np.full((self.width + 2, self.height + 2), fill_value='_', dtype=str)
+        str_grid[grid_as_np(self.get_player1_mask())] = 'a'
+        str_grid[grid_as_np(self.get_player2_mask())] = 'b'
         str_grid[0:, (0, -1), ] = '-'
         str_grid[(0, -1), 0:] = '|'
         str_grid[(0, 0, -1, -1), (0, -1, -1, 0)] = '+'
@@ -478,7 +464,7 @@ def count_free_space_bfs(mask: ndarray, pos: Pos, max_dist: int, lb: int) -> int
     return free_space
 
 
-def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
+def count_free_space_dfs(mask: GridMask, pos: Pos, lb: int):
     """
     Compute a lower bound on the amount of free space, including the current position
     :param mask: Padded logical matrix
@@ -486,9 +472,9 @@ def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
     :param lb: Count at least `lb` number of free spaces, if possible
     :return: Counted free space
     """
-    mask[pos] = False
+    mask[pos[0]][pos[1]] = False
     if lb == 0:
-        return int(mask[pos])
+        return int(mask[pos[0]][pos[1]])
 
     candidate_positions = (
         (pos[0] - 1, pos[1]),
@@ -497,7 +483,7 @@ def count_free_space_dfs(mask: ndarray, pos: Pos, lb: int):
         (pos[0], pos[1] + 1)
     )
 
-    return 1 + sum([count_free_space_dfs(mask, pos=p, lb=lb - 1) for p in candidate_positions if mask[p]])
+    return 1 + sum([count_free_space_dfs(mask, pos=p, lb=lb - 1) for p in candidate_positions if mask[p[0]][p[1]]])
 
 
 def count_move_partitions(cells: Tuple[bool, ...]) -> int:
@@ -535,3 +521,15 @@ def count_move_partitions(cells: Tuple[bool, ...]) -> int:
         return 0
     else:
         return 1
+
+
+def as_grid(grid: ndarray) -> Grid:
+    return grid.tolist()
+
+
+def grid_as_tuple(grid: Grid) -> Tuple[Tuple[int]]:
+    return tuple([tuple(row) for row in grid])
+
+
+def grid_as_np(grid: Grid) -> ndarray:
+    return np.array(grid)

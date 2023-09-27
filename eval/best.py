@@ -13,10 +13,9 @@ def evaluate(board: Board, player: int) -> float:
         score += 10 * (d2 - d1)
 
     # free space lower bound
-    mask = board.get_empty_mask()
     lb = 16
-    f1 = min(count_free_space_dfs(mask.copy(), pos=board.player1_pos, lb=lb), lb)
-    f2 = min(count_free_space_dfs(mask, pos=board.player2_pos, lb=lb), lb)
+    f1 = min(count_free_space_dfs(board.get_empty_mask(), pos=board.player1_pos, lb=lb), lb)
+    f2 = min(count_free_space_dfs(board.get_empty_mask(), pos=board.player2_pos, lb=lb), lb)
     score += 10000 * (f1 - f2)
 
     # distance to center

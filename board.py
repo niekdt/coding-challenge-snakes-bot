@@ -1,5 +1,6 @@
 from collections import deque
 from copy import deepcopy
+from enum import IntEnum, auto, Enum
 from itertools import compress
 from typing import List, Deque, TypeVar, Tuple, Iterator
 
@@ -12,41 +13,57 @@ from ...snake import Snake
 Self = TypeVar("Self", bound="Board")
 Pos = Tuple[int, int]
 
-ALL_MOVES = (Move.LEFT, Move.RIGHT, Move.UP, Move.DOWN)
+
+class BoardMove(IntEnum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
+    __str__ = Enum.__str__
+
+
+MOVES = (BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP, BoardMove.DOWN)
 POS_OFFSET = np.array((1, 1))
 # for np access
 ROW_OFFSET = (- 1, 1, 0, 0)
 COL_OFFSET = (0, 0, 1, -1)
 
+MOVE_MAP = {
+    BoardMove.LEFT: Move.LEFT,
+    BoardMove.RIGHT: Move.RIGHT,
+    BoardMove.UP: Move.UP,
+    BoardMove.DOWN: Move.DOWN
+}
+
 MOVE_TO_DIRECTION = {
-    Move.UP: (0, 1),
-    Move.DOWN: (0, -1),
-    Move.LEFT: (-1, 0),
-    Move.RIGHT: (1, 0),
+    BoardMove.UP: (0, 1),
+    BoardMove.DOWN: (0, -1),
+    BoardMove.LEFT: (-1, 0),
+    BoardMove.RIGHT: (1, 0),
 }
 
 OPPOSITE_MOVE = {
-    Move.LEFT: Move.RIGHT,
-    Move.RIGHT: Move.LEFT,
-    Move.UP: Move.DOWN,
-    Move.DOWN: Move.UP
+    BoardMove.LEFT: BoardMove.RIGHT,
+    BoardMove.RIGHT: BoardMove.LEFT,
+    BoardMove.UP: BoardMove.DOWN,
+    BoardMove.DOWN: BoardMove.UP
 }
 
 TURN_LEFT_MOVE = {
-    Move.LEFT: Move.DOWN,
-    Move.RIGHT: Move.UP,
-    Move.UP: Move.LEFT,
-    Move.DOWN: Move.RIGHT
+    BoardMove.LEFT: BoardMove.DOWN,
+    BoardMove.RIGHT: BoardMove.UP,
+    BoardMove.UP: BoardMove.LEFT,
+    BoardMove.DOWN: BoardMove.RIGHT
 }
 
 TURN_RIGHT_MOVE = {
-    Move.LEFT: Move.UP,
-    Move.RIGHT: Move.DOWN,
-    Move.UP: Move.RIGHT,
-    Move.DOWN: Move.LEFT
+    BoardMove.LEFT: BoardMove.UP,
+    BoardMove.RIGHT: BoardMove.DOWN,
+    BoardMove.UP: BoardMove.RIGHT,
+    BoardMove.DOWN: BoardMove.LEFT
 }
 
-FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[m]) for m in ALL_MOVES}
+FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[m]) for m in MOVES}
 
 
 class Board:
@@ -231,25 +248,25 @@ class Board:
             )
         )
 
-    def can_do_move(self, move: Move, pos: Pos) -> bool:
+    def can_do_move(self, move: BoardMove, pos: Pos) -> bool:
         move_dir = MOVE_TO_DIRECTION[move]
         lb = self.player2_head + self.player2_length
         ub = self.player1_head - self.player1_length
         return lb <= int(self.grid[pos[0] + move_dir[0], pos[1] + move_dir[1]]) <= ub
 
-    def can_player1_do_move(self, move: Move) -> bool:
+    def can_player1_do_move(self, move: BoardMove) -> bool:
         return self.can_do_move(move, self.player1_pos)
 
-    def can_player2_do_move(self, move: Move) -> bool:
+    def can_player2_do_move(self, move: BoardMove) -> bool:
         return self.can_do_move(move, self.player2_pos)
 
-    def iterate_valid_moves(self, player: int, order: Tuple[Move] = ALL_MOVES) -> Iterator[Move]:
+    def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         if player == 1:
             return filter(self.can_player1_do_move, order)
         else:
             return filter(self.can_player2_do_move, order)
 
-    def get_valid_moves(self, player: int) -> List[Move]:
+    def get_valid_moves(self, player: int) -> List[BoardMove]:
         if player == 1:
             x, y = self.player1_pos
         else:
@@ -265,14 +282,14 @@ class Board:
             lb <= int(self.grid[x, y - 1]) <= ub
         )
 
-        return list(compress(ALL_MOVES, can_moves))  # faster than tuple() AND list comprehension
+        return list(compress(MOVES, can_moves))  # faster than tuple() AND list comprehension
 
-    def get_valid_moves_ordered(self, player: int, order: Tuple[Move] = ALL_MOVES) -> List[Move]:
+    def get_valid_moves_ordered(self, player: int, order: Tuple[BoardMove] = MOVES) -> List[BoardMove]:
         moves = self.get_valid_moves(player=player)
         return [x for _, x in sorted(zip(order, moves))]
 
     # performing a move increments the turn counter and places a new wall
-    def perform_move(self, move: Move, player: int) -> None:
+    def perform_move(self, move: BoardMove, player: int) -> None:
         direction = MOVE_TO_DIRECTION[move]
 
         # TODO remove branching
@@ -406,17 +423,8 @@ class Board:
         return str(self)
 
 
-def as_move(move: ndarray) -> Move:
-    """Convert ndarray move to Move enum item"""
-    if move[0] == 0:
-        if move[1] == 1:
-            return Move.UP
-        else:
-            return Move.DOWN
-    elif move[0] == 1:
-        return Move.RIGHT
-    else:
-        return Move.LEFT
+def as_move(move: BoardMove) -> Move:
+    return MOVE_MAP[move]
 
 
 def distance(pos1, pos2) -> int:

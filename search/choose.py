@@ -2,10 +2,10 @@ from math import isinf, inf
 from random import choice
 from typing import Dict
 
-from ....constants import Move
+from snakes.bots.niekdt.board import BoardMove
 
 
-def best_move(move_values: Dict[Move, float], tolerance: float = .001) -> Move:
+def best_move(move_values: Dict[BoardMove, float], tolerance: float = .001) -> BoardMove:
     """Select the highest scored move. Breaks ties at random."""
     best_value = max(move_values.values())
     if isinf(best_value):
@@ -27,7 +27,7 @@ def best_move(move_values: Dict[Move, float], tolerance: float = .001) -> Move:
             return best_moves[0]
 
 
-def single_best_move(move_values: Dict[Move, float], tolerance: float = .001) -> Move:
+def single_best_move(move_values: Dict[BoardMove, float], tolerance: float = .001) -> BoardMove:
     """Returns the highest scored move. Throws an error when there is a score tie."""
     best_value = max(move_values.values())
     if isinf(best_value):
@@ -39,11 +39,11 @@ def single_best_move(move_values: Dict[Move, float], tolerance: float = .001) ->
     return moves[0]
 
 
-def has_single_best_move(move_values: Dict[Move, float], tolerance: float = .001) -> bool:
+def has_single_best_move(move_values: Dict[BoardMove, float], tolerance: float = .001) -> bool:
     return get_best_moves_count(move_values, tolerance) == 1
 
 
-def get_best_moves_count(move_values: Dict[Move, float], tolerance: float = .001) -> int:
+def get_best_moves_count(move_values: Dict[BoardMove, float], tolerance: float = .001) -> int:
     best_value = max(move_values.values())
     if isinf(best_value):
         moves = [m for m, v in move_values.items() if v == inf]

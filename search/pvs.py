@@ -1,9 +1,8 @@
 from math import inf
-from typing import Dict
+from typing import Dict, Tuple
 
-from snakes.bots.niekdt.board import Board, ALL_MOVES, FIRST_MOVE_ORDER, distance
+from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, distance, BoardMove
 from snakes.bots.niekdt.search.negamax import MOVE_HISTORY
-from snakes.constants import Move
 
 MAX_DEPTH = 32
 
@@ -13,8 +12,8 @@ def pvs_moves(
         depth: int,
         eval_fun: callable,
         move_history: Dict = MOVE_HISTORY,
-        root_moves=ALL_MOVES
-) -> Dict[Move, float]:
+        root_moves: Tuple[BoardMove] = MOVES
+) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
@@ -25,7 +24,7 @@ def pvs_moves(
 
     alpha = -inf
     beta = inf
-    best_move = Move.UP
+    best_move = BoardMove.UP
     score_history = dict()
 
     best_value = -inf
@@ -42,7 +41,7 @@ def pvs_moves(
         board.perform_move(move, player=1)
         value = -pvs(
             board,
-            my_move=Move.LEFT,
+            my_move=BoardMove.LEFT,
             opponent_move=move,
             depth_left=depth - 1,
             depth=1,
@@ -66,8 +65,8 @@ def pvs_moves(
 
 def pvs(
         board: Board,
-        my_move: Move,
-        opponent_move: Move,
+        my_move: BoardMove,
+        opponent_move: BoardMove,
         depth_left: int,
         depth: int,
         player: int,
@@ -108,14 +107,14 @@ def pvs(
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
     move_scores = {
-        Move.LEFT: -inf,
-        Move.RIGHT: -inf,
-        Move.UP: -inf,
-        Move.DOWN: -inf
+        BoardMove.LEFT: -inf,
+        BoardMove.RIGHT: -inf,
+        BoardMove.UP: -inf,
+        BoardMove.DOWN: -inf
     }
 
     # do first move
-    move = next(moves, Move.UP)
+    move = next(moves, BoardMove.UP)
     board.perform_move(move, player=player)
     value = -pvs(
         board,
@@ -134,7 +133,7 @@ def pvs(
     move_scores[move] = value
     alpha = max(alpha, value)
     if alpha >= beta:
-        move_history[board_hash] = sorted(ALL_MOVES, key=lambda m: move_scores[m], reverse=True)
+        move_history[board_hash] = sorted(MOVES, key=lambda m: move_scores[m], reverse=True)
         return alpha
 
     # do remaining moves
@@ -175,14 +174,14 @@ def pvs(
         if alpha >= beta:
             break
 
-    move_history[board_hash] = sorted(ALL_MOVES, key=lambda m: move_scores[m], reverse=True)
+    move_history[board_hash] = sorted(MOVES, key=lambda m: move_scores[m], reverse=True)
     return alpha
 
 
 def qsearch(
         board: Board,
-        my_move: Move,
-        opponent_move: Move,
+        my_move: BoardMove,
+        opponent_move: BoardMove,
         depth_left: int,
         depth: int,
         player: int,

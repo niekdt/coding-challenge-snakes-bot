@@ -1,13 +1,12 @@
 from math import inf
 from typing import Dict
 
-from snakes.constants import Move
-from ..board import Board, ALL_MOVES
+from ..board import Board, MOVES, BoardMove
 
 MOVE_HISTORY: Dict = dict()
 
 
-def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[Move, float]:
+def negamax_moves(board: Board, depth: int, eval_fun: callable) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
@@ -51,18 +50,18 @@ def negamax_ab_moves(
         depth: int,
         eval_fun: callable,
         move_history: Dict = MOVE_HISTORY
-) -> Dict[Move, float]:
+) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
     board_hash = board.approx_hash()
-    move_order = move_history.get(board_hash, ALL_MOVES)
+    move_order = move_history.get(board_hash, MOVES)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
 
     alpha = -inf
     beta = inf
-    best_move = Move.UP
+    best_move = BoardMove.UP
 
     best_value = -inf
     for move in moves:
@@ -111,14 +110,14 @@ def negamax_ab(
         return alpha
 
     board_hash = board.approx_hash()
-    move_order = move_history.get(board_hash, ALL_MOVES)
+    move_order = move_history.get(board_hash, MOVES)
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
     move_scores = dict({
-        Move.LEFT: -inf,
-        Move.RIGHT: -inf,
-        Move.UP: -inf,
-        Move.DOWN: -inf
+        BoardMove.LEFT: -inf,
+        BoardMove.RIGHT: -inf,
+        BoardMove.UP: -inf,
+        BoardMove.DOWN: -inf
     })
 
     for move in moves:
@@ -138,5 +137,5 @@ def negamax_ab(
         if alpha >= beta:
             break
 
-    move_history[board_hash] = sorted(ALL_MOVES, key=lambda m: move_scores[m], reverse=True)
+    move_history[board_hash] = sorted(MOVES, key=lambda m: move_scores[m], reverse=True)
     return alpha

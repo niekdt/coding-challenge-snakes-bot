@@ -1,9 +1,9 @@
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
-from ..board import Board
+from ..board import Board, as_move
 from ..eval import death
 from ..search.choose import best_move
 from ..search.negamax import negamax_moves
@@ -47,4 +47,4 @@ class NegamaxBot(Bot):
         move = best_move(move_values)
 
         print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
-        return move
+        return as_move(move)

@@ -4,11 +4,10 @@ import numpy as np
 import pytest
 
 from snakes.bots.niekdt.search.pvs import pvs_moves
-from ..board import Board
+from ..board import Board, BoardMove
 from ..eval import death, candy_dist, best
 from ..search.choose import best_move, has_single_best_move
 from ..search.negamax import negamax_moves, negamax_ab_moves, MOVE_HISTORY
-from ....constants import Move
 from ....snake import Snake
 
 
@@ -30,8 +29,8 @@ def test_forced_move(depth, search):
 
     moves = search(board, depth=depth, eval_fun=death.evaluate)
     assert len(moves) == 1
-    assert Move.DOWN in moves
-    assert moves[Move.DOWN] == 0
+    assert BoardMove.DOWN in moves
+    assert moves[BoardMove.DOWN] == 0
 
 
 @pytest.mark.parametrize('depth', [1, 2, 3, 4])
@@ -65,7 +64,7 @@ def test_goto_candy(depth, search, size):
     moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
 
     assert has_single_best_move(moves)
-    assert best_move(moves) == Move.RIGHT
+    assert best_move(moves) == BoardMove.RIGHT
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10])
@@ -81,9 +80,9 @@ def test_goto_candy_far(depth, search):
     moves = search(board, depth=depth, eval_fun=best.evaluate)
     print(moves)
 
-    assert best_move(moves) in [Move.LEFT, Move.UP]
+    assert best_move(moves) in [BoardMove.LEFT, BoardMove.UP]
     if search == negamax_moves:
-        assert moves[Move.LEFT] == moves[Move.UP]
+        assert moves[BoardMove.LEFT] == moves[BoardMove.UP]
 
 
 @pytest.mark.parametrize('depth', [1, 6, 7, 10])
@@ -99,7 +98,7 @@ def test_goto_candy_near(depth, search):
     moves = search(board, depth=depth, eval_fun=candy_dist.evaluate)
     print(moves)
 
-    assert best_move(moves) == Move.RIGHT
+    assert best_move(moves) == BoardMove.RIGHT
     assert has_single_best_move(moves)
 
 
@@ -118,7 +117,7 @@ def test_goto_candy_near2(depth, search):
 
     moves = search(board, depth=depth, eval_fun=best.evaluate)
 
-    assert best_move(moves) in (Move.LEFT, Move.UP)
+    assert best_move(moves) in (BoardMove.LEFT, BoardMove.UP)
 
 
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 12), (pvs_moves, 12)])
@@ -139,8 +138,8 @@ def test_search_extension_issue(search, depth):
 
     moves = search(board, depth=depth, eval_fun=best.evaluate)
 
-    assert best_move(moves) in (
-    Move.LEFT, Move.UP)  # unclear which move is best, but RIGHT is not picked due to pruning
+    # unclear which move is best, but RIGHT is not picked due to pruning
+    assert best_move(moves) in (BoardMove.LEFT, BoardMove.UP)
 
 
 @pytest.mark.parametrize('search,depth', [(pvs_moves, 6)])
@@ -160,7 +159,7 @@ def test_trap8(search, depth):
     moves = search(board, depth=depth, eval_fun=best.evaluate)
     print(moves)
 
-    assert best_move(moves) == Move.RIGHT
+    assert best_move(moves) == BoardMove.RIGHT
 
 
 @pytest.mark.parametrize('search,depth', [(pvs_moves, 12)])
@@ -179,7 +178,7 @@ def test_wall_search(search, depth):
     )
     moves = search(board, depth=depth, eval_fun=best.evaluate)
 
-    assert best_move(moves) == Move.DOWN
+    assert best_move(moves) == BoardMove.DOWN
 
 
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 12), (pvs_moves, 12)])
@@ -200,7 +199,7 @@ def test_follow_tail(search, depth):
     )
 
     moves = search(board, depth=depth, eval_fun=best.evaluate)
-    assert moves[Move.UP] > -10 ** 5
+    assert moves[BoardMove.UP] > -10 ** 5
 
 
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 12), (pvs_moves, 12)])
@@ -215,7 +214,10 @@ def test_losing_position_gap(search, depth):
     )
 
     moves = search(board, depth=depth, eval_fun=best.evaluate)
-    assert moves[Move.UP] < -10 ** 5
+    assert BoardMove.UP in moves
+    assert BoardMove.LEFT in moves
+    assert BoardMove.RIGHT in moves
+    assert moves[BoardMove.UP] < -10 ** 5
 
 
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 13)])

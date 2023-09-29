@@ -361,29 +361,29 @@ def test_count_free_space_dfs(size, lb):
     b = Board(size, size)
 
     # test without lb
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
     assert space == size ** 2
 
     # test with lb
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
     assert space >= min(lb, size ** 2)
 
     # insert wall
     b.grid[b.from_xy(2, 1)] = 100
     b.grid[b.from_xy(2, 2)] = 100
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
     assert space == size ** 2 - 2
 
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
     assert space >= min(lb, size ** 2 - 2)
 
     if size >= 3:
         # insert void
         for y in range(b.full_height):
             b.grid[b.from_xy(2, y)] = 100
-        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
+        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
         assert space == size
-        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
+        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
         assert space >= min(lb, size)
 
 

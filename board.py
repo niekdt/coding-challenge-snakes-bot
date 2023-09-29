@@ -106,9 +106,13 @@ class Board:
         self.move_head_stack: Deque[int] = deque(maxlen=128)
         self.move_candy_stack: Deque[bool] = deque(maxlen=128)
         self.push_move_pos_stack = self.move_pos_stack.append
-        self.pop_move_pos_stack = self.move_pos_stack.pop
+        self.push_move_head_stack = self.move_head_stack.append
         self.push_move_candy_stack = self.move_candy_stack.append
+        self.pop_move_pos_stack = self.move_pos_stack.pop
+        self.pop_move_head_stack = self.move_head_stack.pop
         self.pop_move_candy_stack = self.move_candy_stack.pop
+        self.spawn_candy = self.candies.append
+        self.remove_candy = self.candies.remove
         self.pos_map = tuple([divmod(i, self.full_height) for i in range(0, self.full_width * self.full_height)])
         self.center: PosIdx = self.from_xy(int(width / 2) + 1, int(height / 2) + 1)
         self.MOVE_POS_OFFSET = {
@@ -218,7 +222,7 @@ class Board:
 
         # spawn candies
         for pos in candies:
-            self.candies.append(self.from_pos(pos) + self.DIR_UP_RIGHT)
+            self.spawn_candy(self.from_pos(pos) + self.DIR_UP_RIGHT)
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -296,7 +300,7 @@ class Board:
             ate_candy = target_pos in self.candies
             self.push_move_candy_stack(ate_candy)
             self.push_move_pos_stack(self.player1_pos)
-            self.move_head_stack.append(self.grid[target_pos])
+            self.push_move_head_stack(self.grid[target_pos])
             self.player1_pos = target_pos
             self.player1_head += 1
             self.grid[self.player1_pos] = self.player1_head
@@ -311,7 +315,7 @@ class Board:
             ate_candy = target_pos in self.candies
             self.push_move_candy_stack(ate_candy)
             self.push_move_pos_stack(self.player2_pos)
-            self.move_head_stack.append(self.grid[target_pos])
+            self.push_move_head_stack(self.grid[target_pos])
             self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
             self.grid[self.player2_pos] = self.player2_head
@@ -329,17 +333,17 @@ class Board:
         if player == 1:
             if ate_candy:
                 self.player1_length -= 1
-                self.candies.append(self.player1_pos)
-            self.grid[self.player1_pos] = self.move_head_stack.pop()
-            self.player1_pos = self.move_pos_stack.pop()
+                self.spawn_candy(self.player1_pos)
+            self.grid[self.player1_pos] = self.pop_move_head_stack()
+            self.player1_pos = self.pop_move_pos_stack()
             self.player1_head -= 1
             self.ub = self.player1_head - self.player1_length
         else:
             if ate_candy:
                 self.player2_length -= 1
-                self.candies.append(self.player2_pos)
-            self.grid[self.player2_pos] = self.move_head_stack.pop()
-            self.player2_pos = self.move_pos_stack.pop()
+                self.spawn_candy(self.player2_pos)
+            self.grid[self.player2_pos] = self.pop_move_head_stack()
+            self.player2_pos = self.pop_move_pos_stack()
             self.player2_head += 1
             self.lb = self.player2_head + self.player2_length
 
@@ -372,23 +376,23 @@ class Board:
 
         return free_space
 
-    def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, ref_pos: PosIdx):
+    def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
         """
         Compute a lower bound on the amount of free space, including the current position
         :param mask: Padded logical matrix
         :param pos: Position to scan from (inclusive)
         :param lb: Count at least `lb` number of free spaces, if possible
         :param max_dist: Maximum L1 distance from the origin to consider
-        :param ref_pos: Origin
+        :param distance_map: A mapping indicating the distance for the given position
         :return: Counted free space
         """
-        if lb == 0 or self.DISTANCE[pos][ref_pos] >= max_dist:
+        if lb == 0 or distance_map[pos] >= max_dist:
             return 1
 
         mask[pos] = False
         return 1 + sum(
             (
-                self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, ref_pos=ref_pos)
+                self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, distance_map=distance_map)
                 for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos] if mask[p]
             )
         )

@@ -127,6 +127,7 @@ class Board:
         )
         self.DIR_LEFT = -self.full_height
         self.DIR_RIGHT = self.full_height
+        self.DIR_TOP_RIGHT = self.full_height + 1
         self.DIR_UP = 1
         self.DIR_DOWN = -1
         self.EIGHT_WAY_POS_OFFSETS_MAP = {
@@ -201,18 +202,18 @@ class Board:
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
-            self.grid[self.from_xy(pos[0] + 1, pos[1] + 1)] = self.player1_head - i
+            self.grid[self.from_pos(pos) + self.DIR_TOP_RIGHT] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
-            self.grid[self.from_xy(pos[0] + 1, pos[1] + 1)] = self.player2_head + i
+            self.grid[self.from_pos(pos) + self.DIR_TOP_RIGHT] = self.player2_head + i
 
-        self.player1_pos = self.from_xy(1 + snake1.positions[0][0], 1 + snake1.positions[0][1])
-        self.player2_pos = self.from_xy(1 + snake2.positions[0][0], 1 + snake2.positions[0][1])
+        self.player1_pos = self.from_pos(snake1.positions[0]) + self.DIR_TOP_RIGHT
+        self.player2_pos = self.from_pos(snake2.positions[0]) + self.DIR_TOP_RIGHT
 
         # spawn candies
         for pos in candies:
-            self._spawn_candy(self.from_xy(pos[0] + 1, pos[1] + 1))
+            self._spawn_candy(self.from_pos(pos) + self.DIR_TOP_RIGHT)
 
     def _spawn_candy(self, pos: PosIdx) -> None:
         self.candies.append(pos)

@@ -234,26 +234,26 @@ def test_print():
 def test_move_generation():
     b = Board(3, 2)
     b.spawn(pos1=(1, 0), pos2=(2, 1))
-    moves1 = b.get_valid_moves(player=1)
+    moves1 = b.get_valid_moves_ordered(player=1)
     assert len(moves1) == 3
     assert BoardMove.LEFT in moves1
     assert BoardMove.RIGHT in moves1
     assert BoardMove.UP in moves1
 
-    moves2 = b.get_valid_moves(player=-1)
+    moves2 = b.get_valid_moves_ordered(player=-1)
     assert len(moves2) == 2
     assert BoardMove.LEFT in moves2
     assert BoardMove.DOWN in moves2
 
     # perform a move and recheck the options
     b.perform_move(BoardMove.LEFT, player=1)
-    moves12 = b.get_valid_moves(player=1)
+    moves12 = b.get_valid_moves_ordered(player=1)
     assert len(moves12) == 2
     assert BoardMove.RIGHT in moves12
     assert BoardMove.UP in moves12
 
     b.perform_move(BoardMove.LEFT, player=2)
-    moves22 = b.get_valid_moves(2)
+    moves22 = b.get_valid_moves_ordered(2)
     assert len(moves22) == 3
     assert BoardMove.LEFT in moves22
     assert BoardMove.RIGHT in moves22

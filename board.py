@@ -125,21 +125,15 @@ class Board:
             1,
             -1
         )
-        self.DIR_LEFT = -self.full_height
-        self.DIR_RIGHT = self.full_height
-        self.DIR_TOP_RIGHT = self.full_height + 1
+        self.DIR_UP_LEFT = -self.full_height + 1
         self.DIR_UP = 1
+        self.DIR_UP_RIGHT = self.full_height + 1
+        self.DIR_RIGHT = self.full_height
+        self.DIR_DOWN_RIGHT = self.full_height - 1
         self.DIR_DOWN = -1
-        self.EIGHT_WAY_POS_OFFSETS_MAP = {
-            Direction.TOP_LEFT: -self.full_height + 1,  # TL
-            Direction.TOP: 1,  # T
-            Direction.TOP_RIGHT: self.full_height + 1,  # TR
-            Direction.RIGHT: self.full_height,  # R
-            Direction.BOTTOM_RIGHT: self.full_height - 1,  # BR
-            Direction.BOTTOM: -1,  # B
-            Direction.BOTTOM_LEFT: -self.full_height - 1,  # BL
-            Direction.LEFT: -self.full_height  # L
-        }
+        self.DIR_DOWN_LEFT = -self.full_height - 1
+        self.DIR_LEFT = -self.full_height
+
         self.EIGHT_WAY_POS_OFFSETS = (
             -self.full_height + 1,  # TL
             1,  # T
@@ -150,6 +144,15 @@ class Board:
             -self.full_height - 1,  # BL
             -self.full_height  # L
         )
+
+        self.FOUR_WAY_CANDIDATE_POSITIONS = [
+            (p + self.DIR_LEFT, p + self.DIR_RIGHT, p + 1, p - 1) for p in range(len(self.grid))
+        ]
+        self.EIGHT_WAY_CANDIDATE_POSITIONS = [
+            (p + self.DIR_UP_LEFT, p + self.DIR_UP, p + self.DIR_UP_RIGHT, p + self.DIR_RIGHT,
+             p + self.DIR_DOWN_RIGHT, p + self.DIR_DOWN, p + self.DIR_DOWN_LEFT, p + self.DIR_LEFT)
+            for p in range(len(self.grid))
+        ]
 
     def from_pos(self, pos: Pos) -> PosIdx:
         assert 0 <= pos[0] < self.full_width
@@ -163,12 +166,6 @@ class Board:
 
     def from_index(self, index: PosIdx) -> Pos:
         return self.pos_map[index]
-
-    def index_left(self, index: PosIdx) -> PosIdx:
-        return index - self.full_height
-
-    def index_right(self, index: PosIdx) -> PosIdx:
-        return index + self.full_height
 
     def spawn(self, pos1: Pos, pos2: Pos) -> None:
         """Spawn snakes of length 1 at the given positions
@@ -202,18 +199,18 @@ class Board:
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
-            self.grid[self.from_pos(pos) + self.DIR_TOP_RIGHT] = self.player1_head - i
+            self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
         for i, pos in enumerate(snake2.positions):
-            self.grid[self.from_pos(pos) + self.DIR_TOP_RIGHT] = self.player2_head + i
+            self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player2_head + i
 
-        self.player1_pos = self.from_pos(snake1.positions[0]) + self.DIR_TOP_RIGHT
-        self.player2_pos = self.from_pos(snake2.positions[0]) + self.DIR_TOP_RIGHT
+        self.player1_pos = self.from_pos(snake1.positions[0]) + self.DIR_UP_RIGHT
+        self.player2_pos = self.from_pos(snake2.positions[0]) + self.DIR_UP_RIGHT
 
         # spawn candies
         for pos in candies:
-            self._spawn_candy(self.from_pos(pos) + self.DIR_TOP_RIGHT)
+            self._spawn_candy(self.from_pos(pos) + self.DIR_UP_RIGHT)
 
     def _spawn_candy(self, pos: PosIdx) -> None:
         self.candies.append(pos)
@@ -247,7 +244,9 @@ class Board:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
         # Start from top-left, clockwise
-        return count_move_partitions([self.lb <= self.grid[pos + offset] <= self.ub for offset in self.EIGHT_WAY_POS_OFFSETS])
+        return count_move_partitions(
+            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_CANDIDATE_POSITIONS[pos]]
+        )
 
     def get_candies(self) -> List[PosIdx]:
         return self.candies
@@ -272,24 +271,15 @@ class Board:
 
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
-
-        return self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub or \
-            self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub or \
-            self.lb <= self.grid[pos + self.DIR_UP] <= self.ub or \
-            self.lb <= self.grid[pos + self.DIR_DOWN] <= self.ub
+        candidate_positions = self.FOUR_WAY_CANDIDATE_POSITIONS[pos]
+        return self.lb <= self.grid[candidate_positions[0]] <= self.ub or \
+            self.lb <= self.grid[candidate_positions[1]] <= self.ub or \
+            self.lb <= self.grid[candidate_positions[2]] <= self.ub or \
+            self.lb <= self.grid[candidate_positions[3]] <= self.ub
 
     def count_moves(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
-
-        # return sum((lb <= self.grid[pos + offset] <= ub for offset in self.FOUR_WAY_POS_OFFSETS))  # slower!
-        return sum(
-            (
-                self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
-                self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
-                self.lb <= self.grid[pos + self.DIR_UP] <= self.ub,
-                self.lb <= self.grid[pos + self.DIR_DOWN] <= self.ub
-            )
-        )
+        return sum((self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos]))
 
     def can_do_move(self, move: BoardMove, pos: PosIdx) -> bool:
         move_dir = self.MOVE_POS_OFFSET[move]
@@ -307,20 +297,12 @@ class Board:
         else:
             return filter(self.can_player2_do_move, order)
 
-    def get_valid_moves(self, player: int) -> List[BoardMove]:
-        pos = self.player1_pos if player == 1 else self.player2_pos
-
-        can_moves = (
-            self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
-            self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
-            self.lb <= self.grid[pos + 1] <= self.ub,
-            self.lb <= self.grid[pos - 1] <= self.ub
-        )
-
-        return list(compress(MOVES, can_moves))  # faster than tuple() AND list comprehension
-
     def get_valid_moves_ordered(self, player: int, order: Tuple[BoardMove] = MOVES) -> List[BoardMove]:
-        moves = self.get_valid_moves(player=player)
+        pos = self.player1_pos if player == 1 else self.player2_pos
+        moves = list(compress(
+            MOVES,
+            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos])
+        ))  # faster than tuple() AND list comprehension
         return [x for _, x in sorted(zip(order, moves))]
 
     # performing a move increments the turn counter and places a new wall
@@ -400,12 +382,8 @@ class Board:
             mask[cur_pos] = False
 
             if cur_dist < max_dist:
-                candidate_positions = (
-                    cur_pos + self.DIR_LEFT,
-                    cur_pos + self.DIR_RIGHT,
-                    cur_pos + 1,
-                    cur_pos - 1
-                )
+                # TODO optimize
+                candidate_positions = self.FOUR_WAY_CANDIDATE_POSITIONS[cur_pos]
                 free_mask = [mask[p] for p in candidate_positions]
                 new_positions = list(compress(candidate_positions, free_mask))
                 for p in new_positions:
@@ -432,20 +410,17 @@ class Board:
             return 1
 
         mask[pos] = False
-
-        candidate_positions = (
-            pos + self.DIR_LEFT,
-            pos + self.DIR_RIGHT,
-            pos + 1,
-            pos - 1
-        )
-
         return 1 + sum(
-            [
+            (
                 self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, ref_pos=ref_pos)
-                for p in candidate_positions if mask[p]
-            ]
+                for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos] if mask[p]
+            )
         )
+        # Slower!
+        # return 1 + sum(
+        #   [self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, ref_pos=ref_pos)
+        #   for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos] if mask[p]]
+        # )
 
     def grid_as_np(self, grid: Grid) -> ndarray:
         a = np.array(grid)

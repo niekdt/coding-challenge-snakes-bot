@@ -6,19 +6,26 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from snakes.constants import Move
-from ..board import Board, as_move, count_free_space_dfs, count_free_space_bfs, count_move_partitions, BoardMove, \
-    grid_as_np
+from ..board import Board, as_move, count_move_partitions, BoardMove
 from ....snake import Snake
 
 
 def test_init():
-    b = Board(8, 6)
-    assert b.shape == (8, 6)
-    assert len(b) == 8 * 6
+    b = Board(2, 3)
+    assert b.shape == (2, 3)
+    assert len(b) == 2 * 3
+    assert len(b.grid) == 4 * 5
 
-    assert np.all(grid_as_np(b.get_empty_mask())[1:-1, 1:-1])
-    assert not np.any(grid_as_np(b.get_player1_mask())[1:-1, 1:-1])
-    assert not np.any(grid_as_np(b.get_player2_mask())[1:-1, 1:-1])
+    for x in range(0, b.full_width):
+        assert b.grid[b.from_xy(x, 0)] != 0
+    for y in range(0, b.full_height):
+        assert b.grid[b.from_xy(0, y)] != 0
+    for x, y in itertools.product(range(b.width), range(b.height)):
+        assert b.grid[b.from_xy(1 + x, 1 + y)] == 0
+
+    assert np.all(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1])
+    assert not np.any(b.grid_as_np(b.get_player1_mask())[1:-1, 1:-1])
+    assert not np.any(b.grid_as_np(b.get_player2_mask())[1:-1, 1:-1])
     assert not b.has_candy()
     assert hash(b) != 0
     assert b.approx_hash() != 0
@@ -35,90 +42,82 @@ def test_spawn():
     b = Board(4, 4)
     b.spawn(pos1=(1, 2), pos2=(2, 3))
 
-    assert b.player1_pos == (2, 3)
-    assert b.player2_pos == (3, 4)
-    assert np.sum(grid_as_np(b.get_player1_mask())[1:-1, 1:-1]) == 1
-    assert np.sum(grid_as_np(b.get_player2_mask())[1:-1, 1:-1]) == 1
+    assert b.player1_pos == b.from_xy(2, 3)
+    assert b.player2_pos == b.from_xy(3, 4)
+    assert np.sum(b.grid_as_np(b.get_player1_mask())[1:-1, 1:-1]) == 1
+    assert np.sum(b.grid_as_np(b.get_player2_mask())[1:-1, 1:-1]) == 1
     assert not b.is_empty_pos(b.player1_pos)
     assert not b.is_empty_pos(b.player2_pos)
-    assert b.get_player1_mask()[2][3]
-    assert b.get_player2_mask()[3][4]
+    assert b.get_player1_mask()[b.from_xy(2, 3)]
+    assert b.get_player2_mask()[b.from_xy(3, 4)]
 
 
-def test_is_valid_pos():
+def test_is_empty_pos():
     b = Board(3, 2)
-    for x, y in itertools.product(range(b.width), range(b.height)):
-        assert b.is_valid_pos((x, y))
+    for x in range(0, b.full_width):
+        assert b.grid[b.from_xy(x, 0)] != 0
+        assert not b.is_empty_pos(b.from_xy(x, 0))
+        assert not b.is_empty_pos(b.from_xy(x, b.height + 1))
+    for y in range(0, b.full_height):
+        assert b.grid[b.from_xy(0, y)] != 0
+        assert not b.is_empty_pos(b.from_xy(0, y))
+        assert not b.is_empty_pos(b.from_xy(b.width + 1, y))
 
-    assert not b.is_valid_pos((-1, 0))
-    assert not b.is_valid_pos((0, -1))
-    assert not b.is_valid_pos((b.width, 0))
-    assert not b.is_valid_pos((0, b.height))
+    for x, y in itertools.product(range(b.width), range(b.height)):
+        assert b.grid[b.from_xy(1 + x, 1 + y)] == 0
+        assert b.is_empty_pos(b.from_xy(1 + x, 1 + y))
+
+    b.spawn(pos1=(0, 0), pos2=(2, 1))
+    assert not b.is_empty_pos(b.from_xy(1, 1))
+    assert not b.is_empty_pos(b.from_xy(3, 2))
+
+    assert b.is_empty_pos(b.from_xy(1, 2))
 
 
 def test_get_empty_mask():
     b = Board(3, 2)
     ref_mask = np.full(b.shape, fill_value=True)
-    assert_array_equal(grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
+    assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
 
     b.spawn(pos1=(0, 0), pos2=(2, 1))
     ref_mask[(0, 0)] = False
     ref_mask[(2, 1)] = False
-    assert_array_equal(grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
-
-
-def test_is_empty_pos():
-    b = Board(3, 2)
-    for x in range(0, b.width + 1):
-        assert not b.is_empty_pos((x, 0))
-        assert not b.is_empty_pos((x, b.height + 1))
-    for y in range(0, b.height + 1):
-        assert not b.is_empty_pos((0, y))
-        assert not b.is_empty_pos((b.width + 1, y))
-
-    for x, y in itertools.product(range(b.width), range(b.height)):
-        assert b.is_empty_pos((x + 1, y + 1))
-
-    b.spawn(pos1=(0, 0), pos2=(2, 1))
-    assert not b.is_empty_pos((1, 1))
-    assert not b.is_empty_pos((3, 2))
-
-    assert b.is_empty_pos((1, 2))
+    assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
 
 
 def test_spawn_candy():
     b = Board(3, 2)
     b0 = b.copy()
     assert not b.has_candy()
-    b._spawn_candy((1, 2))
+    b._spawn_candy(b.from_xy(1, 2))
     assert b.has_candy()
-    assert b.is_candy_pos((1, 2))
+    assert b.is_candy_pos(b.from_xy(1, 2))
 
 
 def test_remove_candy():
     b = Board(3, 2)
-    b._spawn_candy((1, 2))
+    b._spawn_candy(b.from_xy(1, 2))
     b0 = b.copy()
-    b._remove_candy((1, 2))
+    b._remove_candy(b.from_xy(1, 2))
     assert not b.has_candy()
-    assert not b.is_candy_pos((1, 2))
+    assert not b.is_candy_pos(b.from_xy(1, 2))
 
 
 def test_is_candy_pos():
     b = Board(3, 2)
     for x, y in itertools.product(range(b.width), range(b.height)):
-        assert not b.is_candy_pos((x, y))
+        assert not b.is_candy_pos(b.from_xy(x, y))
 
     candy_pos = (1, 1)
-    b._spawn_candy(candy_pos)
+    b._spawn_candy(b.from_pos(candy_pos))
     assert b.has_candy()
-    assert b.is_candy_pos(candy_pos)
+    assert b.is_candy_pos(b.from_pos(candy_pos))
 
     for x, y in itertools.product(range(b.width), range(b.height)):
         if x == candy_pos[0] and y == candy_pos[1]:
             continue
         else:
-            assert not b.is_candy_pos((x, y))
+            assert not b.is_candy_pos(b.from_xy(x, y))
 
 
 def test_perform_move():
@@ -131,32 +130,32 @@ def test_perform_move():
 
     # move P1
     b.perform_move(move=BoardMove.RIGHT, player=1)
-    assert b.player1_pos == (2, 1)
-    assert b.is_empty_pos((1, 1))
-    assert not b.is_empty_pos((2, 1))
-    assert not b.is_empty_pos((3, 3))
+    assert b.player1_pos == b.from_xy(2, 1)
+    assert b.is_empty_pos(b.from_xy(1, 1))
+    assert not b.is_empty_pos(b.from_xy(2, 1))
+    assert not b.is_empty_pos(b.from_xy(3, 3))
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
 
     # move P2
     b.perform_move(move=BoardMove.LEFT, player=2)
-    assert b.player2_pos == (2, 3)
-    assert b.is_empty_pos((1, 1))
-    assert b.is_empty_pos((3, 3))
-    assert not b.is_empty_pos((2, 1))
-    assert not b.is_empty_pos((2, 3))
+    assert b.player2_pos == b.from_xy(2, 3)
+    assert b.is_empty_pos(b.from_xy(1, 1))
+    assert b.is_empty_pos(b.from_xy(3, 3))
+    assert not b.is_empty_pos(b.from_xy(2, 1))
+    assert not b.is_empty_pos(b.from_xy(2, 3))
 
     # move P1 to center
     b.perform_move(move=BoardMove.UP, player=1)
-    assert b.player1_pos == (2, 2)
+    assert b.player1_pos == b.from_xy(2, 2)
 
 
 def test_perform_move_candy():
     b = Board(3, 3)
     b.spawn(pos1=(0, 0), pos2=(2, 2))
     candy_pos = (2, 1)
-    b._spawn_candy(candy_pos)
+    b._spawn_candy(b.from_pos(candy_pos))
     b.perform_move(move=BoardMove.RIGHT, player=1)
     assert not b.has_candy()  # candy should have been eaten
     assert b.player1_length == 2
@@ -206,14 +205,14 @@ def test_undo_move_candy():
     b = Board(3, 3)
     b.spawn(pos1=(0, 0), pos2=(2, 2))
     candy_pos = (2, 1)
-    b._spawn_candy(candy_pos)
+    b._spawn_candy(b.from_pos(candy_pos))
     b_start = b.copy()
 
     b.perform_move(move=BoardMove.RIGHT, player=1)
     assert not b.has_candy()
     b.undo_move(player=1)
     assert b.has_candy()
-    assert b.is_candy_pos(candy_pos)
+    assert b.is_candy_pos(b.from_pos(candy_pos))
     assert b == b_start
     assert hash(b) == hash(b_start)
     assert b.approx_hash() == b_start.approx_hash()
@@ -274,7 +273,7 @@ def test_set_state():
     assert b.player2_length == 1
     assert b.last_player == -1
     assert_array_equal(
-        grid_as_np(b.grid)[1:-1, 1:-1],
+        b.grid_as_np(b.grid)[1:-1, 1:-1],
         np.array([[1, 0], [0, -1]])
     )
     assert not b.has_candy()
@@ -292,7 +291,7 @@ def test_set_state():
     assert b.player2_length == 1
     assert b.last_player == -1
     assert_array_equal(
-        grid_as_np(b.grid)[1:-1, 1:-1],
+        b.grid_as_np(b.grid)[1:-1, 1:-1],
         np.array([[1, 2], [0, -1]])
     )
     assert not b.has_candy()
@@ -308,7 +307,7 @@ def test_set_state():
     assert b3.player1_head == 2
     assert b3.player2_head == -2
     assert_array_equal(
-        grid_as_np(b3.grid)[1:-1, 1:-1],
+        b.grid_as_np(b3.grid)[1:-1, 1:-1],
         np.array([[1, 2], [-2, -1]])
     )
     assert not b.has_candy()
@@ -324,7 +323,7 @@ def test_set_state_candy():
     )
     b1 = b.copy()
     assert b.has_candy()
-    assert b.is_candy_pos((2, 1))
+    assert b.is_candy_pos(b.from_xy(2, 1))
 
     # no candies (reuse board)
     b.set_state(
@@ -333,7 +332,7 @@ def test_set_state_candy():
         candies=[]
     )
     assert not b.has_candy()
-    assert not b.is_candy_pos((2, 1))
+    assert not b.is_candy_pos(b.from_xy(2, 1))
 
     # two candies
     b.set_state(
@@ -342,8 +341,8 @@ def test_set_state_candy():
         candies=[(1, 0), (0, 1)]
     )
     assert b.has_candy()
-    assert b.is_candy_pos((2, 1))
-    assert b.is_candy_pos((1, 2))
+    assert b.is_candy_pos(b.from_xy(2, 1))
+    assert b.is_candy_pos(b.from_xy(1, 2))
 
 
 @pytest.mark.parametrize('board_move,move', [
@@ -359,76 +358,55 @@ def test_as_move(board_move, move):
 @pytest.mark.parametrize('size', [2, 3, 5])
 @pytest.mark.parametrize('lb', [1, 2, 3, 5, 10])
 def test_count_free_space_dfs(size, lb):
-    mask = np.pad(
-        np.full((size, size), fill_value=True),
-        pad_width=1,
-        constant_values=False
-    )
+    b = Board(size, size)
 
     # test without lb
-    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
     assert space == size ** 2
 
     # test with lb
-    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
     assert space >= min(lb, size ** 2)
 
     # insert wall
-    mask = np.pad(
-        np.full((size, size), fill_value=True),
-        pad_width=1,
-        constant_values=False
-    )
-    mask[(2, 1)] = False
-    mask[(2, 2)] = False
-    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
+    b.grid[b.from_xy(2, 1)] = 100
+    b.grid[b.from_xy(2, 2)] = 100
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
     assert space == size ** 2 - 2
 
-    space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
+    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
     assert space >= min(lb, size ** 2 - 2)
 
     if size >= 3:
         # insert void
-        mask = np.pad(
-            np.full((size, size), fill_value=True),
-            pad_width=1,
-            constant_values=False
-        )
-        mask[2:] = False
-        space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=1000, max_dist=100, ref_pos=(1, 1))
+        for y in range(b.full_height):
+            b.grid[b.from_xy(2, y)] = 100
+        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, ref_pos=b.from_xy(1, 1))
         assert space == size
-        space = count_free_space_dfs(mask=mask.copy().tolist(), pos=(1, 1), lb=lb, max_dist=100, ref_pos=(1, 1))
+        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, ref_pos=b.from_xy(1, 1))
         assert space >= min(lb, size)
 
 
 @pytest.mark.parametrize('size', [2, 3, 4, 5])
 @pytest.mark.parametrize('lb', [10, 5, 3, 2, 1])
 def test_count_free_space_bfs(size, lb):
-    mask = np.pad(
-        np.full((size, size), fill_value=True),
-        pad_width=1,
-        constant_values=False
-    )
+    b = Board(size, size)
 
     # test without restrictions
-    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=1000)
+    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=1000)
     assert space == size ** 2
 
     # test with lb
-    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=lb)
+    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=lb)
     assert min(lb, size ** 2) <= space <= size ** 2
 
     if size >= 3:
         # insert void
-        mask = np.pad(
-            np.full((size, size), fill_value=True),
-            pad_width=1,
-            constant_values=False
-        )
-        mask[2:] = False
-        space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=1000)
+        for y in range(b.full_height):
+            b.grid[b.from_xy(2, y)] = 100
+        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=1000)
         assert space == size
-        space = count_free_space_bfs(mask=mask.copy().tolist(), pos=(1, 1), max_dist=size * 2, lb=lb)
+        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=lb)
         assert space >= min(lb, size)
 
 
@@ -436,21 +414,17 @@ def test_count_free_space_bfs(size, lb):
 @pytest.mark.parametrize('max_dist', [1, 2, 3, 4, 5])
 @pytest.mark.parametrize('lb', [10, 5, 3, 2, 1])
 def test_count_free_space_bfs_dist(size, max_dist, lb):
-    mask = np.pad(
-        np.full((size, size), fill_value=True),
-        pad_width=1,
-        constant_values=False
-    )
+    b = Board(size, size)
 
     def max_area(d):
         return 2 * (d + 1) ** 2 - 2 * (d + 1) + 1
 
     center = (int(size / 2) + 1, int(size / 2) + 1)
-    space = count_free_space_bfs(mask=mask.copy().tolist(), pos=center, max_dist=max_dist, lb=1000)
+    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_pos(center), max_dist=max_dist, lb=1000)
     assert space == min(size ** 2, max_area(max_dist))
 
     # test with lb
-    space2 = count_free_space_bfs(mask=mask.copy().tolist(), pos=center, max_dist=max_dist, lb=lb)
+    space2 = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_pos(center), max_dist=max_dist, lb=lb)
     assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))
 
 

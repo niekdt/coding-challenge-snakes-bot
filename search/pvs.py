@@ -1,7 +1,7 @@
 from math import inf
 from typing import Dict, Tuple
 
-from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, distance, BoardMove
+from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, BoardMove
 
 MAX_DEPTH = 32
 
@@ -223,7 +223,7 @@ def qsearch(
 
 
 def is_quiet_node(board: Board) -> bool:
-    return distance(board.player1_pos, board.player2_pos) > 2 and \
+    return board.distance(board.player1_pos, board.player2_pos) > 2 and \
         board.count_moves(player=1) > 1 and \
         board.count_moves(player=-1) > 1 and \
         board.count_player_move_partitions(player=1) <= 1 and \

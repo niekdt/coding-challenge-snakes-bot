@@ -25,6 +25,18 @@ class BoardMove(IntEnum):
     __str__ = Enum.__str__
 
 
+class Direction(IntEnum):
+    TOP = auto()
+    TOP_RIGHT = auto()
+    RIGHT = auto()
+    BOTTOM_RIGHT = auto()
+    BOTTOM = auto()
+    BOTTOM_LEFT = auto()
+    LEFT = auto()
+    TOP_LEFT = auto()
+    __str__ = Enum.__str__
+
+
 MOVES = (BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP, BoardMove.DOWN)
 POS_OFFSET = np.array((1, 1))
 # for np access
@@ -87,6 +99,8 @@ class Board:
         self.player2_head: int = 0
         self.player1_length: int = 0
         self.player2_length: int = 0
+        self.lb: int = 0
+        self.ub: int = 0
         self.last_player = 1
         self.move_pos_stack: Deque[PosIdx] = deque(maxlen=128)
         self.move_head_stack: Deque[int] = deque(maxlen=128)
@@ -99,6 +113,42 @@ class Board:
             BoardMove.UP: 1,
             BoardMove.DOWN: -1
         }
+        self.FOUR_WAY_POS_OFFSETS = (
+            -self.full_height,
+            self.full_height,
+            1,
+            -1
+        )  # L, R, U, D
+        self.FOUR_WAY_POS_OFFSETS = (
+            -self.full_height,
+            self.full_height,
+            1,
+            -1
+        )
+        self.DIR_LEFT = -self.full_height
+        self.DIR_RIGHT = self.full_height
+        self.DIR_UP = 1
+        self.DIR_DOWN = -1
+        self.EIGHT_WAY_POS_OFFSETS_MAP = {
+            Direction.TOP_LEFT: -self.full_height + 1,  # TL
+            Direction.TOP: 1,  # T
+            Direction.TOP_RIGHT: self.full_height + 1,  # TR
+            Direction.RIGHT: self.full_height,  # R
+            Direction.BOTTOM_RIGHT: self.full_height - 1,  # BR
+            Direction.BOTTOM: -1,  # B
+            Direction.BOTTOM_LEFT: -self.full_height - 1,  # BL
+            Direction.LEFT: -self.full_height  # L
+        }
+        self.EIGHT_WAY_POS_OFFSETS = (
+            -self.full_height + 1,  # TL
+            1,  # T
+            self.full_height + 1,  # TR
+            self.full_height,  # R
+            self.full_height - 1,  # BR
+            -1,  # B
+            -self.full_height - 1,  # BL
+            -self.full_height  # L
+        )
 
     def from_pos(self, pos: Pos) -> PosIdx:
         assert 0 <= pos[0] < self.full_width
@@ -118,24 +168,6 @@ class Board:
 
     def index_right(self, index: PosIdx) -> PosIdx:
         return index + self.full_height
-
-    def index_up(self, index: PosIdx) -> PosIdx:
-        return index + 1
-
-    def index_down(self, index: PosIdx) -> PosIdx:
-        return index - 1
-
-    def index_top_left(self, index: PosIdx) -> PosIdx:
-        return index - self.full_height + 1
-
-    def index_top_right(self, index: PosIdx) -> PosIdx:
-        return index + self.full_height + 1
-
-    def index_bottom_left(self, index: PosIdx) -> PosIdx:
-        return index - self.full_height - 1
-
-    def index_bottom_right(self, index: PosIdx) -> PosIdx:
-        return index + self.full_height - 1
 
     def spawn(self, pos1: Pos, pos2: Pos) -> None:
         """Spawn snakes of length 1 at the given positions
@@ -164,6 +196,8 @@ class Board:
         self.player2_length = len(snake2.positions)
         self.player1_head = self.player1_length
         self.player2_head = -self.player2_length
+        self.lb = self.player2_head + self.player2_length
+        self.ub = self.player1_head - self.player1_length
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
@@ -198,52 +232,33 @@ class Board:
 
     def is_player_forced(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
 
         return sum(
             (
-                lb <= self.grid[self.index_left(pos)] <= ub,
-                lb <= self.grid[self.index_right(pos)] <= ub,
-                lb <= self.grid[self.index_up(pos)] <= ub,
-                lb <= self.grid[self.index_down(pos)] <= ub
+                self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
+                self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
+                self.lb <= self.grid[pos + 1] <= self.ub,
+                self.lb <= self.grid[pos - 1] <= self.ub
             )
         ) == 1
 
     def count_player_move_partitions(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
 
         # Start from top-left, clockwise
-        cells = (
-            lb <= self.grid[self.index_top_left(pos)] <= ub,  # TL = 0
-            lb <= self.grid[self.index_up(pos)] <= ub,  # T = 1
-            lb <= self.grid[self.index_top_right(pos)] <= ub,  # TR = 2
-            lb <= self.grid[self.index_right(pos)] <= ub,  # R = 3
-            lb <= self.grid[self.index_bottom_right(pos)] <= ub,  # BR = 4
-            lb <= self.grid[self.index_down(pos)] <= ub,  # B = 5
-            lb <= self.grid[self.index_bottom_left(pos)] <= ub,  # BL = 6
-            lb <= self.grid[self.index_left(pos)] <= ub  # L = 7
-        )
-
-        return count_move_partitions(cells)
+        return count_move_partitions([self.lb <= self.grid[pos + offset] <= self.ub for offset in self.EIGHT_WAY_POS_OFFSETS])
 
     def get_candies(self) -> List[PosIdx]:
         return self.candies
 
     def get_empty_mask(self) -> GridMask:
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
-        return [lb <= v <= ub for v in self.grid]
+        return [self.lb <= v <= self.ub for v in self.grid]
 
     def get_player1_mask(self) -> GridMask:
-        ub = self.player1_head - self.player1_length
-        return [v > ub for v in self.grid]
+        return [v > self.ub for v in self.grid]
 
     def get_player2_mask(self) -> GridMask:
-        lb = self.player2_head + self.player2_length
-        return [v < lb for v in self.grid]
+        return [v < self.lb for v in self.grid]
 
     def get_player_mask(self, player: int) -> GridMask:
         if player == 1:
@@ -257,34 +272,27 @@ class Board:
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
-
-        return lb <= self.grid[self.index_left(pos)] <= ub or \
-            lb <= self.grid[self.index_right(pos)] <= ub or \
-            lb <= self.grid[self.index_up(pos)] <= ub or \
-            lb <= self.grid[self.index_down(pos)] <= ub
+        return self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub or \
+            self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub or \
+            self.lb <= self.grid[pos + self.DIR_UP] <= self.ub or \
+            self.lb <= self.grid[pos + self.DIR_DOWN] <= self.ub
 
     def count_moves(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
-
+        # return sum((lb <= self.grid[pos + offset] <= ub for offset in self.FOUR_WAY_POS_OFFSETS))  # slower!
         return sum(
             (
-                lb <= self.grid[self.index_left(pos)] <= ub,
-                lb <= self.grid[self.index_right(pos)] <= ub,
-                lb <= self.grid[self.index_up(pos)] <= ub,
-                lb <= self.grid[self.index_down(pos)] <= ub
+                self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
+                self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
+                self.lb <= self.grid[pos + self.DIR_UP] <= self.ub,
+                self.lb <= self.grid[pos + self.DIR_DOWN] <= self.ub
             )
         )
 
     def can_do_move(self, move: BoardMove, pos: PosIdx) -> bool:
         move_dir = self.MOVE_POS_OFFSET[move]
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
-        return lb <= self.grid[pos + move_dir] <= ub
+        return self.lb <= self.grid[pos + move_dir] <= self.ub
 
     def can_player1_do_move(self, move: BoardMove) -> bool:
         return self.can_do_move(move, self.player1_pos)
@@ -299,19 +307,13 @@ class Board:
             return filter(self.can_player2_do_move, order)
 
     def get_valid_moves(self, player: int) -> List[BoardMove]:
-        if player == 1:
-            pos = self.player1_pos
-        else:
-            pos = self.player2_pos
-
-        lb = self.player2_head + self.player2_length
-        ub = self.player1_head - self.player1_length
+        pos = self.player1_pos if player == 1 else self.player2_pos
 
         can_moves = (
-            lb <= self.grid[self.index_left(pos)] <= ub,
-            lb <= self.grid[self.index_right(pos)] <= ub,
-            lb <= self.grid[self.index_up(pos)] <= ub,
-            lb <= self.grid[self.index_down(pos)] <= ub
+            self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
+            self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
+            self.lb <= self.grid[pos + 1] <= self.ub,
+            self.lb <= self.grid[pos - 1] <= self.ub
         )
 
         return list(compress(MOVES, can_moves))  # faster than tuple() AND list comprehension
@@ -336,7 +338,7 @@ class Board:
             self.player1_pos = target_pos
             self.player1_head += 1
             self.grid[self.player1_pos] = self.player1_head
-
+            self.ub = self.player1_head - self.player1_length
             if ate_candy:
                 self.player1_length += 1
                 self._remove_candy(self.player1_pos)
@@ -351,6 +353,7 @@ class Board:
             self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
             self.grid[self.player2_pos] = self.player2_head
+            self.lb = self.player2_head + self.player2_length
             if ate_candy:
                 self.player2_length += 1
                 self._remove_candy(self.player2_pos)
@@ -368,6 +371,7 @@ class Board:
             self.grid[self.player1_pos] = self.move_head_stack.pop()
             self.player1_pos = self.move_pos_stack.pop()
             self.player1_head -= 1
+            self.ub = self.player1_head - self.player1_length
         else:
             if ate_candy:
                 self.player2_length -= 1
@@ -375,6 +379,7 @@ class Board:
             self.grid[self.player2_pos] = self.move_head_stack.pop()
             self.player2_pos = self.move_pos_stack.pop()
             self.player2_head += 1
+            self.lb = self.player2_head + self.player2_length
 
         self.last_player = -self.last_player
 
@@ -395,10 +400,10 @@ class Board:
 
             if cur_dist < max_dist:
                 candidate_positions = (
-                    self.index_left(cur_pos),
-                    self.index_right(cur_pos),
-                    self.index_up(cur_pos),
-                    self.index_down(cur_pos)
+                    cur_pos + self.DIR_LEFT,
+                    cur_pos + self.DIR_RIGHT,
+                    cur_pos + 1,
+                    cur_pos - 1
                 )
                 free_mask = [mask[p] for p in candidate_positions]
                 new_positions = list(compress(candidate_positions, free_mask))
@@ -428,10 +433,10 @@ class Board:
         mask[pos] = False
 
         candidate_positions = (
-            self.index_left(pos),
-            self.index_right(pos),
-            self.index_up(pos),
-            self.index_down(pos)
+            pos + self.DIR_LEFT,
+            pos + self.DIR_RIGHT,
+            pos + 1,
+            pos - 1
         )
 
         return 1 + sum(
@@ -453,10 +458,8 @@ class Board:
         return self.width * self.height
 
     def __eq__(self, other) -> bool:
-        return self.player1_head == other.player1_head and \
-            self.player2_head == other.player2_head and \
-            self.player1_length == other.player1_length and \
-            self.player2_length == other.player2_length and \
+        return self.ub == other.ub and \
+            self.lb == other.lb and \
             self.last_player == other.last_player and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
@@ -511,7 +514,7 @@ def distance(pos1: Pos, pos2: Pos) -> int:
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
-def count_move_partitions(cells: Tuple[bool, ...]) -> int:
+def count_move_partitions(cells: List[bool]) -> int:
     assert len(cells) == 8
 
     n_moves = sum((cells[1], cells[3], cells[5], cells[7]))

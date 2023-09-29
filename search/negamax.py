@@ -14,7 +14,7 @@ def negamax_moves(
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    moves = board.get_valid_moves(player=1)
+    moves = board.get_valid_moves_ordered(player=1)
     move_values = dict()
     for move in moves:
         board.perform_move(move, player=1)
@@ -37,7 +37,7 @@ def negamax(board: Board, depth: int, player: int, eval_fun: callable) -> float:
     if best_value == inf:
         return best_value
 
-    moves = board.get_valid_moves(player=player)
+    moves = board.get_valid_moves_ordered(player=player)
     for move in moves:
         board.perform_move(move, player=player)
         best_value = max(

@@ -223,7 +223,7 @@ def qsearch(
 
 
 def is_quiet_node(board: Board) -> bool:
-    return board.distance(board.player1_pos, board.player2_pos) > 2 and \
+    return board.DISTANCE[board.player1_pos][board.player2_pos] > 2 and \
         board.count_moves(player=1) > 1 and \
         board.count_moves(player=-1) > 1 and \
         board.count_player_move_partitions(player=1) <= 1 and \

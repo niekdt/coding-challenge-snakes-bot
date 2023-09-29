@@ -6,9 +6,9 @@ def evaluate(board: Board, player: int) -> float:
     score = 1000 * (board.player1_length - board.player2_length)
 
     # candy dist
-    if board.has_candy():
-        d1 = sum([board.distance(board.player1_pos, candy_pos) for candy_pos in board.get_candies()])
-        d2 = sum([board.distance(board.player2_pos, candy_pos) for candy_pos in board.get_candies()])
+    if board.candies:
+        d1 = sum([board.DISTANCE[board.player1_pos][candy_pos] for candy_pos in board.candies])
+        d2 = sum([board.DISTANCE[board.player2_pos][candy_pos] for candy_pos in board.candies])
 
         score += 10 * (d2 - d1)
 
@@ -20,6 +20,6 @@ def evaluate(board: Board, player: int) -> float:
     score += 10000 * (f1 - f2)
 
     # distance to center
-    score += 5 * (board.distance(board.player2_pos, board.center) - board.distance(board.player1_pos, board.center))
+    score += 5 * (board.DISTANCE[board.player2_pos][board.center] - board.DISTANCE[board.player1_pos][board.center])
 
     return player * score

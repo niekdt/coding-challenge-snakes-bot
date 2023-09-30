@@ -351,12 +351,15 @@ class Board:
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
         assert isinstance(mask, list)
+        candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
         mask[pos] = False
         free_space = 0
         queue: Deque[PosIdx] = deque(maxlen=max_dist * 4)
-        dqueue: Deque[int] = deque(maxlen=max_dist * 4)
+        dqueue: Deque[int] = deque(maxlen=queue.maxlen)
         queue.append(pos)
         dqueue.append(0)
+
+        def is_pos_empty(p): return mask[p]
 
         while queue and free_space < lb:
             cur_pos = queue.popleft()
@@ -365,14 +368,15 @@ class Board:
             mask[cur_pos] = False
 
             if cur_dist < max_dist:
-                # TODO optimize
-                candidate_positions = self.FOUR_WAY_CANDIDATE_POSITIONS[cur_pos]
-                free_mask = [mask[p] for p in candidate_positions]
-                new_positions = list(compress(candidate_positions, free_mask))
-                for p in new_positions:
-                    mask[p] = False
-                queue.extend(new_positions)
-                dqueue.extend([cur_dist + 1] * len(new_positions))
+                # new_positions = list(compress(candidate_positions, [mask[p] for p in candidate_positions])) # Slow
+                # new_positions = list(filter(is_pos_empty, candidate_pos_cache[cur_pos])) # Pretty fast
+                # for new_pos in [p for p in candidate_pos_cache[cur_pos] if mask[p]]: # Slow
+                # for new_pos in list(compress(candidate_positions, [mask[p] for p in candidate_positions])): # Slow^2
+
+                for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
+                    mask[new_pos] = False
+                    queue.append(new_pos)
+                    dqueue.append(cur_dist + 1)
 
         return free_space
 

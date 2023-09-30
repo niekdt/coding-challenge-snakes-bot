@@ -350,20 +350,16 @@ class Board:
         self.last_player = -self.last_player
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
-        assert isinstance(mask, list)
         candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
         mask[pos] = False
         free_space = 0
-        queue: Deque[PosIdx] = deque(maxlen=max_dist * 4)
-        dqueue: Deque[int] = deque(maxlen=queue.maxlen)
-        queue.append(pos)
-        dqueue.append(0)
+        queue: Deque[Tuple[PosIdx, int]] = deque(maxlen=max_dist * 4)
+        queue.append((pos, 0))
 
         def is_pos_empty(p): return mask[p]
 
         while queue and free_space < lb:
-            cur_pos = queue.popleft()
-            cur_dist = dqueue.popleft()
+            cur_pos, cur_dist = queue.popleft()
             free_space += 1
             mask[cur_pos] = False
 
@@ -375,14 +371,14 @@ class Board:
 
                 for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
                     mask[new_pos] = False
-                    queue.append(new_pos)
-                    dqueue.append(cur_dist + 1)
+                    queue.append((new_pos, cur_dist + 1))
 
         return free_space
 
     def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
         """
         Compute a lower bound on the amount of free space, including the current position
+        Uses depth-first search using a stack
         :param mask: Padded logical matrix
         :param pos: Position to scan from (inclusive)
         :param lb: Count at least `lb` number of free spaces, if possible
@@ -390,21 +386,27 @@ class Board:
         :param distance_map: A mapping indicating the distance for the given position
         :return: Counted free space
         """
-        if lb == 0 or distance_map[pos] >= max_dist:
-            return 1
-
+        candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
         mask[pos] = False
-        return 1 + sum(
-            (
-                self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, distance_map=distance_map)
-                for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos] if mask[p]
-            )
-        )
-        # Slower!
-        # return 1 + sum(
-        #   [self.count_free_space_dfs(mask, pos=p, lb=lb - 1, max_dist=max_dist, ref_pos=ref_pos)
-        #   for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos] if mask[p]]
-        # )
+        free_space = 0
+        stack: Deque[PosIdx] = deque(maxlen=128)
+        stack.append(pos)
+
+        def is_pos_empty(p): return mask[p]
+
+        while stack and free_space < lb:
+            cur_pos = stack.pop()
+
+            if distance_map[pos] > max_dist:  # faster than doing the check in is_pos_empty() for some reason
+                continue
+            free_space += 1
+            mask[cur_pos] = False
+
+            for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
+                mask[new_pos] = False
+                stack.append(new_pos)
+
+        return free_space
 
     def grid_as_np(self, grid: Grid) -> ndarray:
         a = np.array(grid)

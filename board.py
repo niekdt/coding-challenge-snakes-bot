@@ -270,11 +270,12 @@ class Board:
 
     def count_moves(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
-        return sum((self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos]))
+        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_CANDIDATE_POSITIONS[pos]])
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         pos = self.player1_pos if player == 1 else self.player2_pos
-        return filter(lambda m: self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub, order)
+        def can_do(m): return self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub
+        return filter(can_do, order)
 
         # pos = self.player1_pos if player == 1 else self.player2_pos
         # can_moves = (self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub for m in order)

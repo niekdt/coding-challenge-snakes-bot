@@ -101,6 +101,7 @@ class Board:
         self.player2_length: int = 0
         self.lb: int = 0
         self.ub: int = 0
+        self.hash: int = 0
         self.last_player = 1
         self.move_pos_stack: Deque[PosIdx] = deque(maxlen=128)
         self.move_head_stack: Deque[int] = deque(maxlen=128)
@@ -224,6 +225,8 @@ class Board:
         for pos in candies:
             self.spawn_candy(self.from_pos(pos) + self.DIR_UP_RIGHT)
 
+        self.hash = 0
+
     @property
     def shape(self) -> Tuple[int, int]:
         return self.width, self.height
@@ -326,6 +329,7 @@ class Board:
                 self.candies.remove(self.player2_pos)
 
         self.last_player = player
+        self.hash = 0
 
     def undo_move(self, player: int) -> None:
         assert self.last_player == player
@@ -349,6 +353,7 @@ class Board:
             self.lb = self.player2_head + self.player2_length
 
         self.last_player = -self.last_player
+        self.hash = 0
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
         candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
@@ -430,10 +435,12 @@ class Board:
 
     def __hash__(self) -> int:
         """Hash of the exact game state"""
-        return hash((
-            tuple(self.grid),
-            self.last_player
-        ))
+        if self.hash == 0:
+            self.hash = hash((
+                tuple(self.grid),
+                self.last_player
+            ))
+        return self.hash
 
     def approx_hash(self) -> int:
         """Hash of the game state only considering blocked cells, player positions, candies, and last player"""

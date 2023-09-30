@@ -1,6 +1,9 @@
+from functools import cache
+
 from ..board import Board
 
 
+@cache
 def evaluate(board: Board, player: int) -> float:
     # length
     score = 1000 * (board.player1_length - board.player2_length)

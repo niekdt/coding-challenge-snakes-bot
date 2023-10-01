@@ -25,6 +25,12 @@ class BoardMove(IntEnum):
     __str__ = Enum.__str__
 
 
+BOARD_MOVE_UP = BoardMove.UP
+BOARD_MOVE_DOWN = BoardMove.DOWN
+BOARD_MOVE_LEFT = BoardMove.LEFT
+BOARD_MOVE_RIGHT = BoardMove.RIGHT
+
+
 class Direction(IntEnum):
     TOP = auto()
     TOP_RIGHT = auto()
@@ -277,7 +283,9 @@ class Board:
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         pos = self.player1_pos if player == 1 else self.player2_pos
+
         def can_do(m): return self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub
+
         return filter(can_do, order)
 
         # pos = self.player1_pos if player == 1 else self.player2_pos
@@ -362,7 +370,8 @@ class Board:
         queue: Deque[Tuple[PosIdx, int]] = deque(maxlen=max_dist * 4)
         queue.append((pos, 0))
 
-        def is_pos_empty(p): return mask[p]
+        def is_pos_empty(p):
+            return mask[p]
 
         while queue and free_space < lb:
             cur_pos, cur_dist = queue.popleft()
@@ -398,7 +407,8 @@ class Board:
         stack: Deque[PosIdx] = deque(maxlen=128)
         stack.append(pos)
 
-        def is_pos_empty(p): return mask[p]
+        def is_pos_empty(p):
+            return mask[p]
 
         while stack and free_space < lb:
             cur_pos = stack.pop()

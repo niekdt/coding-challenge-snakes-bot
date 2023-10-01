@@ -1,7 +1,8 @@
 from math import inf
 from typing import Dict, Tuple
 
-from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, BoardMove
+from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, BoardMove, BOARD_MOVE_UP, BOARD_MOVE_LEFT, \
+    BOARD_MOVE_RIGHT, BOARD_MOVE_DOWN
 
 MAX_DEPTH = 32
 
@@ -23,7 +24,7 @@ def pvs_moves(
 
     alpha = -inf
     beta = inf
-    best_move = BoardMove.UP
+    best_move = BOARD_MOVE_UP
     score_history = dict()
 
     best_value = -inf
@@ -40,7 +41,7 @@ def pvs_moves(
         board.perform_move(move, player=1)
         value = -pvs(
             board,
-            my_move=BoardMove.LEFT,
+            my_move=BOARD_MOVE_LEFT,
             opponent_move=move,
             depth_left=depth - 1,
             depth=1,
@@ -106,14 +107,14 @@ def pvs(
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
     move_scores = {
-        BoardMove.LEFT: -inf,
-        BoardMove.RIGHT: -inf,
-        BoardMove.UP: -inf,
-        BoardMove.DOWN: -inf
+        BOARD_MOVE_LEFT: -inf,
+        BOARD_MOVE_RIGHT: -inf,
+        BOARD_MOVE_UP: -inf,
+        BOARD_MOVE_DOWN: -inf
     }
 
     # do first move
-    move = next(moves, BoardMove.UP)
+    move = next(moves, BOARD_MOVE_UP)
     board.perform_move(move, player=player)
     value = -pvs(
         board,

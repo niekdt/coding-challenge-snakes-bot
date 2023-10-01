@@ -13,7 +13,6 @@ from ....snake import Snake
 def test_init():
     b = Board(2, 3)
     assert b.shape == (2, 3)
-    assert len(b) == 2 * 3
     assert len(b.grid) == 4 * 5
 
     for x in range(0, b.full_width):

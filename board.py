@@ -238,12 +238,9 @@ class Board:
         # clear move stacks
         self.move_stack.clear()
 
-        self.player1_length = len(snake1.positions)
-        self.player2_length = len(snake2.positions)
-        self.player1_head = self.player1_length
-        self.player2_head = -self.player2_length
-        self.lb = self.player2_head + self.player2_length
-        self.ub = self.player1_head - self.player1_length
+        self.player1_length, self.player2_length = len(snake1.positions), len(snake2.positions)
+        self.player1_head, self.player2_head = self.player1_length, -self.player2_length
+        self.lb, self.ub = self.player2_head + self.player2_length, self.player1_head - self.player1_length
 
         # head = p1_head, tail = p1_head - len + 1
         for i, pos in enumerate(snake1.positions):
@@ -253,8 +250,8 @@ class Board:
         for i, pos in enumerate(snake2.positions):
             self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player2_head + i
 
-        self.player1_pos = self.from_pos(snake1.positions[0]) + self.DIR_UP_RIGHT
-        self.player2_pos = self.from_pos(snake2.positions[0]) + self.DIR_UP_RIGHT
+        self.player1_pos, self.player2_pos = self.from_pos(snake1.positions[0]) + self.DIR_UP_RIGHT, \
+            self.from_pos(snake2.positions[0]) + self.DIR_UP_RIGHT
 
         # spawn candies
         for pos in candies:
@@ -267,7 +264,7 @@ class Board:
         return self.width, self.height
 
     def is_empty_pos(self, pos: PosIdx) -> bool:
-        return self.player2_head + self.player2_length <= self.grid[pos] <= self.player1_head - self.player1_length
+        return self.lb <= self.grid[pos] <= self.ub
 
     def count_player_move_partitions(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
@@ -288,11 +285,11 @@ class Board:
 
     def can_move(self, player: int) -> bool:
         pos = self.player1_pos if player == 1 else self.player2_pos
-        candidate_positions = self.FOUR_WAY_CANDIDATE_POSITIONS[pos]
-        return self.lb <= self.grid[candidate_positions[0]] <= self.ub or \
-            self.lb <= self.grid[candidate_positions[1]] <= self.ub or \
-            self.lb <= self.grid[candidate_positions[2]] <= self.ub or \
-            self.lb <= self.grid[candidate_positions[3]] <= self.ub
+        pos_options = self.FOUR_WAY_CANDIDATE_POSITIONS[pos]
+        return self.lb <= self.grid[pos_options[0]] <= self.ub or \
+            self.lb <= self.grid[pos_options[1]] <= self.ub or \
+            self.lb <= self.grid[pos_options[2]] <= self.ub or \
+            self.lb <= self.grid[pos_options[3]] <= self.ub
 
     def count_moves(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
@@ -328,10 +325,8 @@ class Board:
             # update game state
             ate_candy = target_pos in self.candies
             self.push_move_stack((self.grid[target_pos], self.player1_pos, ate_candy, self.hash))
-            self.player1_pos = target_pos
             self.player1_head += 1
-            self.grid[self.player1_pos] = self.player1_head
-            self.ub = self.player1_head - self.player1_length
+            self.player1_pos, self.grid[self.player1_pos], self.ub = target_pos, self.player1_head, self.player1_head - self.player1_length
             if ate_candy:
                 self.player1_length += 1
                 self.remove_candy(self.player1_pos)
@@ -341,16 +336,13 @@ class Board:
             # update game state
             ate_candy = target_pos in self.candies
             self.push_move_stack((self.grid[target_pos], self.player2_pos, ate_candy, self.hash))
-            self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
-            self.grid[self.player2_pos] = self.player2_head
-            self.lb = self.player2_head + self.player2_length
+            self.player2_pos, self.grid[self.player2_pos], self.lb = target_pos, self.player2_head, self.player2_head + self.player2_length
             if ate_candy:
                 self.player2_length += 1
                 self.remove_candy(self.player2_pos)
 
-        self.last_player = player
-        self.hash = 0
+        self.last_player, self.hash = player, 0
 
     def undo_move(self, player: int) -> None:
         assert self.last_player == player
@@ -403,8 +395,7 @@ class Board:
         :param distance_map: A mapping indicating the distance for the given position
         :return: Counted free space
         """
-        candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
-        free_space = 0
+        free_space, candidate_pos_cache = 0, self.FOUR_WAY_CANDIDATE_POSITIONS
         stack: Deque[PosIdx] = deque(maxlen=128)
         stack.append(pos)
 
@@ -412,8 +403,7 @@ class Board:
             cur_pos = stack.pop()
             if not mask[cur_pos] or distance_map[cur_pos] > max_dist:
                 continue
-            mask[cur_pos] = False
-            free_space += 1
+            mask[cur_pos], free_space = False, free_space + 1
             stack.extend(candidate_pos_cache[cur_pos])
 
         return free_space
@@ -425,9 +415,6 @@ class Board:
 
     def copy(self) -> Self:
         return deepcopy(self)
-
-    def __len__(self) -> int:
-        return self.width * self.height
 
     def __eq__(self, other) -> bool:
         return self.ub == other.ub and \

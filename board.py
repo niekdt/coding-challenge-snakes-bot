@@ -386,17 +386,17 @@ class Board:
         while queue and free_space < lb:
             cur_pos, cur_dist = queue.popleft()
             free_space += 1
-            mask[cur_pos] = False
 
-            if cur_dist < max_dist:
-                # new_positions = list(compress(candidate_positions, [mask[p] for p in candidate_positions])) # Slow
-                # new_positions = list(filter(is_pos_empty, candidate_pos_cache[cur_pos])) # Pretty fast
-                # for new_pos in [p for p in candidate_pos_cache[cur_pos] if mask[p]]: # Slow
-                # for new_pos in list(compress(candidate_positions, [mask[p] for p in candidate_positions])): # Slow^2
+            if cur_dist >= max_dist:
+                continue
+            # new_positions = list(compress(candidate_positions, [mask[p] for p in candidate_positions])) # Slow
+            # new_positions = list(filter(is_pos_empty, candidate_pos_cache[cur_pos])) # Pretty fast
+            # for new_pos in [p for p in candidate_pos_cache[cur_pos] if mask[p]]: # Slow
+            # for new_pos in list(compress(candidate_positions, [mask[p] for p in candidate_positions])): # Slow^2
 
-                for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
-                    mask[new_pos] = False
-                    queue.append((new_pos, cur_dist + 1))
+            for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
+                mask[new_pos] = False
+                queue.append((new_pos, cur_dist + 1))
 
         return free_space
 
@@ -412,24 +412,17 @@ class Board:
         :return: Counted free space
         """
         candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
-        mask[pos] = False
         free_space = 0
         stack: Deque[PosIdx] = deque(maxlen=128)
         stack.append(pos)
 
-        def is_pos_empty(p):
-            return mask[p]
-
         while stack and free_space < lb:
-            cur_pos, mask[cur_pos] = stack.pop(), False
-
-            if distance_map[pos] > max_dist:  # faster than doing the check in is_pos_empty() for some reason
+            cur_pos = stack.pop()
+            if not mask[cur_pos] or distance_map[cur_pos] > max_dist:
                 continue
+            mask[cur_pos] = False
             free_space += 1
-
-            for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
-                mask[new_pos] = False
-                stack.append(new_pos)
+            stack.extend(candidate_pos_cache[cur_pos])
 
         return free_space
 

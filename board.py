@@ -88,6 +88,47 @@ FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[
 
 
 class Board:
+    __slots__ = (
+        'width',
+        'height',
+        'full_width',
+        'full_height',
+        'center',
+        'grid',
+        'candies',
+        'player1_pos',
+        'player2_pos',
+        'player1_head',
+        'player2_head',
+        'player1_length',
+        'player2_length',
+        'lb',
+        'ub',
+        'hash',
+        'last_player',
+        'move_stack',
+        'push_move_stack',
+        'pop_move_stack',
+        'spawn_candy',
+        'remove_candy',
+        'pos_map',
+        'FOUR_WAY_CANDIDATE_POSITIONS',
+        'EIGHT_WAY_CANDIDATE_POSITIONS',
+        'DISTANCE',
+        'MOVE_POS_OFFSET',
+        'FOUR_WAY_POS_OFFSETS',
+        'EIGHT_WAY_POS_OFFSETS',
+        'DIR_UP_LEFT',
+        'DIR_UP',
+        'DIR_UP_RIGHT',
+        'DIR_RIGHT',
+        'DIR_DOWN_RIGHT',
+        'DIR_DOWN',
+        'DIR_DOWN_LEFT',
+        'DIR_LEFT',
+
+    )
+
     def __init__(self, width: int, height: int) -> None:
         """Define an empty board of a given dimension"""
         assert width > 0
@@ -380,12 +421,11 @@ class Board:
             return mask[p]
 
         while stack and free_space < lb:
-            cur_pos = stack.pop()
+            cur_pos, mask[cur_pos] = stack.pop(), False
 
             if distance_map[pos] > max_dist:  # faster than doing the check in is_pos_empty() for some reason
                 continue
             free_space += 1
-            mask[cur_pos] = False
 
             for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
                 mask[new_pos] = False

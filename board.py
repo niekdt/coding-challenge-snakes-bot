@@ -374,28 +374,20 @@ class Board:
         self.last_player = -self.last_player
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
-        candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
-        mask[pos] = False
-        free_space = 0
+        mask[pos], free_space, candidate_pos_cache = False, 1, self.FOUR_WAY_CANDIDATE_POSITIONS
         queue: Deque[Tuple[PosIdx, int]] = deque(maxlen=max_dist * 4)
         queue.append((pos, 0))
 
-        def is_pos_empty(p):
-            return mask[p]
-
         while queue and free_space < lb:
             cur_pos, cur_dist = queue.popleft()
-            free_space += 1
 
             if cur_dist >= max_dist:
-                continue
-            # new_positions = list(compress(candidate_positions, [mask[p] for p in candidate_positions])) # Slow
-            # new_positions = list(filter(is_pos_empty, candidate_pos_cache[cur_pos])) # Pretty fast
-            # for new_pos in [p for p in candidate_pos_cache[cur_pos] if mask[p]]: # Slow
-            # for new_pos in list(compress(candidate_positions, [mask[p] for p in candidate_positions])): # Slow^2
+                break
 
-            for new_pos in filter(is_pos_empty, candidate_pos_cache[cur_pos]):
-                mask[new_pos] = False
+            for new_pos in candidate_pos_cache[cur_pos]:
+                if not mask[new_pos]:
+                    continue
+                mask[new_pos], free_space = False, free_space + 1
                 queue.append((new_pos, cur_dist + 1))
 
         return free_space

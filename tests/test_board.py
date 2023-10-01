@@ -392,20 +392,20 @@ def test_count_free_space_bfs(size, lb):
     b = Board(size, size)
 
     # test without restrictions
-    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=1000)
+    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=1000)
     assert space == size ** 2
 
     # test with lb
-    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=lb)
+    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=lb)
     assert min(lb, size ** 2) <= space <= size ** 2
 
     if size >= 3:
         # insert void
         for y in range(b.full_height):
             b.grid[b.from_xy(2, y)] = 100
-        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=1000)
+        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=1000)
         assert space == size
-        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=size * 2, lb=lb)
+        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=lb)
         assert space >= min(lb, size)
 
 

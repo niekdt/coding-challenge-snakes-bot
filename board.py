@@ -109,15 +109,9 @@ class Board:
         self.ub: int = 0
         self.hash: int = 0
         self.last_player = 1
-        self.move_pos_stack: Deque[PosIdx] = deque(maxlen=128)
-        self.move_head_stack: Deque[int] = deque(maxlen=128)
-        self.move_candy_stack: Deque[bool] = deque(maxlen=128)
-        self.push_move_pos_stack = self.move_pos_stack.append
-        self.push_move_head_stack = self.move_head_stack.append
-        self.push_move_candy_stack = self.move_candy_stack.append
-        self.pop_move_pos_stack = self.move_pos_stack.pop
-        self.pop_move_head_stack = self.move_head_stack.pop
-        self.pop_move_candy_stack = self.move_candy_stack.pop
+        self.move_stack: Deque[int, PosIdx, bool, int] = deque(maxlen=128)  # (head, pos, candy, hash)
+        self.push_move_stack = self.move_stack.append
+        self.pop_move_stack = self.move_stack.pop
         self.spawn_candy = self.candies.append
         self.remove_candy = self.candies.remove
         self.pos_map = tuple([divmod(i, self.full_height) for i in range(0, self.full_width * self.full_height)])
@@ -174,13 +168,9 @@ class Board:
         ]
 
     def from_pos(self, pos: Pos) -> PosIdx:
-        assert 0 <= pos[0] < self.full_width
-        assert 0 <= pos[1] < self.full_height
         return pos[0] * self.full_height + pos[1]
 
     def from_xy(self, x: int, y: int) -> PosIdx:
-        assert 0 <= x < self.full_width
-        assert 0 <= y < self.full_height
         return x * self.full_height + y
 
     def from_index(self, index: PosIdx) -> Pos:
@@ -205,9 +195,7 @@ class Board:
         self.candies.clear()
 
         # clear move stacks
-        self.move_pos_stack.clear()
-        self.move_head_stack.clear()
-        self.move_candy_stack.clear()
+        self.move_stack.clear()
 
         self.player1_length = len(snake1.positions)
         self.player2_length = len(snake2.positions)
@@ -239,18 +227,6 @@ class Board:
 
     def is_empty_pos(self, pos: PosIdx) -> bool:
         return self.player2_head + self.player2_length <= self.grid[pos] <= self.player1_head - self.player1_length
-
-    def is_player_forced(self, player: int) -> bool:
-        pos = self.player1_pos if player == 1 else self.player2_pos
-
-        return sum(
-            (
-                self.lb <= self.grid[pos + self.DIR_LEFT] <= self.ub,
-                self.lb <= self.grid[pos + self.DIR_RIGHT] <= self.ub,
-                self.lb <= self.grid[pos + 1] <= self.ub,
-                self.lb <= self.grid[pos - 1] <= self.ub
-            )
-        ) == 1
 
     def count_player_move_partitions(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
@@ -310,58 +286,51 @@ class Board:
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.push_move_candy_stack(ate_candy)
-            self.push_move_pos_stack(self.player1_pos)
-            self.push_move_head_stack(self.grid[target_pos])
+            self.push_move_stack((self.grid[target_pos], self.player1_pos, ate_candy, self.hash))
             self.player1_pos = target_pos
             self.player1_head += 1
             self.grid[self.player1_pos] = self.player1_head
             self.ub = self.player1_head - self.player1_length
-            if target_pos in self.candies:
+            if ate_candy:
                 self.player1_length += 1
-                self.candies.remove(self.player1_pos)
+                self.remove_candy(self.player1_pos)
         else:
             target_pos = self.player2_pos + direction
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.push_move_candy_stack(ate_candy)
-            self.push_move_pos_stack(self.player2_pos)
-            self.push_move_head_stack(self.grid[target_pos])
+            self.push_move_stack((self.grid[target_pos], self.player2_pos, ate_candy, self.hash))
             self.player2_pos = target_pos
             self.player2_head -= 1  # the only difference in logic between the players
             self.grid[self.player2_pos] = self.player2_head
             self.lb = self.player2_head + self.player2_length
             if ate_candy:
                 self.player2_length += 1
-                self.candies.remove(self.player2_pos)
+                self.remove_candy(self.player2_pos)
 
         self.last_player = player
         self.hash = 0
 
     def undo_move(self, player: int) -> None:
         assert self.last_player == player
-        ate_candy = self.pop_move_candy_stack()
+        old_pos = self.player1_pos if player == 1 else self.player2_pos
 
         if player == 1:
+            self.grid[self.player1_pos], self.player1_pos, ate_candy, self.hash = self.pop_move_stack()
             if ate_candy:
                 self.player1_length -= 1
-                self.spawn_candy(self.player1_pos)
-            self.grid[self.player1_pos] = self.pop_move_head_stack()
-            self.player1_pos = self.pop_move_pos_stack()
+                self.spawn_candy(old_pos)
             self.player1_head -= 1
             self.ub = self.player1_head - self.player1_length
         else:
+            self.grid[self.player2_pos], self.player2_pos, ate_candy, self.hash = self.pop_move_stack()
             if ate_candy:
                 self.player2_length -= 1
-                self.spawn_candy(self.player2_pos)
-            self.grid[self.player2_pos] = self.pop_move_head_stack()
-            self.player2_pos = self.pop_move_pos_stack()
+                self.spawn_candy(old_pos)
             self.player2_head += 1
             self.lb = self.player2_head + self.player2_length
 
         self.last_player = -self.last_player
-        self.hash = 0
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
         candidate_pos_cache = self.FOUR_WAY_CANDIDATE_POSITIONS
@@ -444,16 +413,11 @@ class Board:
             self.grid == other.grid
 
     def __hash__(self) -> int:
-        """Hash of the exact game state"""
         if self.hash == 0:
-            self.hash = hash((
-                tuple(self.grid),
-                self.last_player
-            ))
+            self.hash = hash((tuple(self.grid), self.last_player))
         return self.hash
 
     def approx_hash(self) -> int:
-        """Hash of the game state only considering blocked cells, player positions, candies, and last player"""
         return hash((
             tuple(self.grid),
             self.player1_pos,

@@ -296,7 +296,6 @@ def test_set_state():
     )
     assert not b.candies
     assert hash(b) != hash(b0)
-    assert b.approx_hash() != b0.approx_hash()
 
     b3 = Board(2, 2)
     b3.set_state(

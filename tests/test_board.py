@@ -194,6 +194,10 @@ def test_set_state():
     assert b.player2_head == -2
     assert b.player1_length == 2
     assert b.player2_length == 2
+    assert b.player1_pos == b.from_xy(2, 1)
+    assert b.player2_pos == b.from_xy(2, 2)
+    assert b.player1_prev_pos == b.from_xy(1, 1)
+    assert b.player2_prev_pos == b.from_xy(3, 2)
     assert b.last_player == -1
     assert_array_equal(
         b.grid_as_np(b.grid)[1:-1, 1:-1],
@@ -212,6 +216,10 @@ def test_set_state():
     assert b.player2_head == -2
     assert b.player1_length == 2
     assert b.player2_length == 2
+    assert b.player1_pos == b.from_xy(1, 1)
+    assert b.player2_pos == b.from_xy(3, 2)
+    assert b.player1_prev_pos == b.from_xy(2, 1)
+    assert b.player2_prev_pos == b.from_xy(2, 2)
     assert b.last_player == -1
     assert_array_equal(
         b.grid_as_np(b.grid)[1:-1, 1:-1],
@@ -269,6 +277,8 @@ def test_perform_move():
     b.perform_move(move=BoardMove.RIGHT, player=1)
     assert b.player1_pos == b.from_xy(3, 1)
     assert b.player2_pos == b.from_xy(2, 3)
+    assert b.player1_prev_pos == b.from_xy(2, 1)
+    assert b.player2_prev_pos == b.from_xy(3, 3)
     assert not b.is_empty_pos(b.from_xy(3, 1))
     assert not b.is_empty_pos(b.from_xy(2, 1))
     assert b.is_empty_pos(b.from_xy(1, 1))
@@ -277,9 +287,11 @@ def test_perform_move():
     assert b.approx_hash() != b0.approx_hash()
 
     # move P2 left
-    b.perform_move(move=BoardMove.LEFT, player=2)
+    b.perform_move(move=BoardMove.LEFT, player=-1)
     assert b.player2_pos == b.from_xy(1, 3)
     assert b.player1_pos == b.from_xy(3, 1)
+    assert b.player1_prev_pos == b.from_xy(2, 1)
+    assert b.player2_prev_pos == b.from_xy(2, 3)
     assert not b.is_empty_pos(b.from_xy(1, 3))
     assert not b.is_empty_pos(b.from_xy(2, 3))
     assert b.is_empty_pos(b.from_xy(3, 3))
@@ -287,6 +299,7 @@ def test_perform_move():
     # move P1 up
     b.perform_move(move=BoardMove.UP, player=1)
     assert b.player1_pos == b.from_xy(3, 2)
+    assert b.player1_prev_pos == b.from_xy(3, 1)
 
 
 def test_perform_move_candy():
@@ -317,6 +330,10 @@ def test_undo_move():
     b.perform_move(move=BoardMove.RIGHT, player=1)
     b.undo_move(player=1)
     assert b == b_start
+    assert b.player1_pos == b.from_xy(2, 1)
+    assert b.player2_pos == b.from_xy(2, 3)
+    assert b.player1_prev_pos == b.from_xy(1, 1)
+    assert b.player2_prev_pos == b.from_xy(3, 3)
     assert hash(b) == hash(b_start)
     assert b.approx_hash() == b_start.approx_hash()
 
@@ -333,6 +350,10 @@ def test_undo_move():
 
     b.undo_move(player=-1)
     assert b == b_ref2
+    assert b.player1_pos == b.from_xy(3, 1)
+    assert b.player2_pos == b.from_xy(2, 3)
+    assert b.player1_prev_pos == b.from_xy(2, 1)
+    assert b.player2_prev_pos == b.from_xy(3, 3)
     assert hash(b) == hash(b_ref2)
     assert b.approx_hash() == b_ref2.approx_hash()
 

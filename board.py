@@ -217,18 +217,9 @@ class Board:
     def from_index(self, index: PosIdx) -> Pos:
         return self.pos_map[index]
 
-    def spawn(self, pos1: Pos, pos2: Pos) -> None:
-        """Spawn snakes of length 1 at the given positions
-        Indices start from 0
-
-        Merely for testing purposes"""
-        self.set_state(
-            snake1=Snake(id=0, positions=np.array([pos1])),
-            snake2=Snake(id=1, positions=np.array([pos2])),
-            candies=[]
-        )
-
     def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
+        assert len(snake1.positions) > 1
+        assert len(snake2.positions) > 1
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid

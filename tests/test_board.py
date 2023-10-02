@@ -37,22 +37,92 @@ def test_empty_hash():
     assert hash(Board(4, 4)) != hash(Board(4, 5))
 
 
-def test_spawn():
-    b = Board(4, 4)
-    b.spawn(pos1=(1, 2), pos2=(2, 3))
-
-    assert b.player1_pos == b.from_xy(2, 3)
-    assert b.player2_pos == b.from_xy(3, 4)
-    assert np.sum(b.grid_as_np(b.get_player1_mask())[1:-1, 1:-1]) == 1
-    assert np.sum(b.grid_as_np(b.get_player2_mask())[1:-1, 1:-1]) == 1
-    assert not b.is_empty_pos(b.player1_pos)
-    assert not b.is_empty_pos(b.player2_pos)
-    assert b.get_player1_mask()[b.from_xy(2, 3)]
-    assert b.get_player2_mask()[b.from_xy(3, 4)]
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_distance(width, height):
+    b = Board(width, height)
+    for x1, y1 in itertools.product(range(b.full_width), range(b.full_height)):
+        for x2, y2 in itertools.product(range(b.full_width), range(b.full_height)):
+            p1 = b.from_xy(x1, y1)
+            p2 = b.from_xy(x2, y2)
+            assert b.DISTANCE[p1][p2] == abs(x1 - x2) + abs(y1 - y2)
+            assert b.DISTANCE[p2][p1] == b.DISTANCE[p1][p2]
 
 
-def test_is_empty_pos():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_four_way_positions(width, height):
+    b = Board(width, height)
+    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
+        p = b.from_xy(x, y)
+        positions = b.FOUR_WAY_POSITIONS[p]
+        ref_positions = (
+            b.from_xy(x - 1, y),
+            b.from_xy(x + 1, y),
+            b.from_xy(x, y - 1),
+            b.from_xy(x, y + 1)
+        )
+        assert isinstance(positions, tuple)
+        assert len(positions) == 4
+        assert set(positions) == set(ref_positions)
+
+
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_four_way_trans_positions(width, height):
+    b = Board(width, height)
+    for x, y in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+        p = b.from_xy(x, y)
+        all_positions = b.FOUR_WAY_POSITIONS[p]
+        for p_old in all_positions:
+            assert isinstance(b.FOUR_WAY_POSITIONS_FROM_POS[p_old], list)
+            positions = b.FOUR_WAY_POSITIONS_FROM_POS[p_old][p]
+            assert positions is not None
+            assert isinstance(positions, tuple)
+            ref_positions = set(all_positions)
+            ref_positions.remove(p_old)
+            assert len(positions) == 3
+            assert set(positions) == set(ref_positions)
+
+
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_eight_way_positions(width, height):
+    b = Board(width, height)
+    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
+        p = b.from_xy(x, y)
+        positions = b.EIGHT_WAY_POSITIONS[p]
+        ref_positions = tuple(
+            b.from_xy(x + xo, y + yo)
+            for xo, yo in itertools.product([-1, 0, 1], repeat=2)
+            if xo != 0 or yo != 0
+        )
+        assert isinstance(positions, tuple)
+        assert len(positions) == 8
+        assert set(positions) == set(ref_positions)
+
+
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_eight_way_trans_positions(width, height):
+    b = Board(width, height)
+    for x, y in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+        p = b.from_xy(x, y)
+        all_positions = b.EIGHT_WAY_POSITIONS[p]
+        for p_old in all_positions:
+            assert isinstance(b.EIGHT_WAY_POSITIONS_FROM_POS[p_old], list)
+            positions = b.EIGHT_WAY_POSITIONS_FROM_POS[p_old][p]
+            assert positions is not None
+            assert isinstance(positions, tuple)
+            ref_positions = set(all_positions)
+            ref_positions.remove(p_old)
+            assert len(positions) == 7
+            assert set(positions) == set(ref_positions)
+
+
+@pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])
+def test_fully_is_empty_pos(width, height):
+    b = Board(width, height)
     for x in range(0, b.full_width):
         assert b.grid[b.from_xy(x, 0)] != 0
         assert not b.is_empty_pos(b.from_xy(x, 0))
@@ -66,21 +136,11 @@ def test_is_empty_pos():
         assert b.grid[b.from_xy(1 + x, 1 + y)] == 0
         assert b.is_empty_pos(b.from_xy(1 + x, 1 + y))
 
-    b.spawn(pos1=(0, 0), pos2=(2, 1))
-    assert not b.is_empty_pos(b.from_xy(1, 1))
-    assert not b.is_empty_pos(b.from_xy(3, 2))
 
-    assert b.is_empty_pos(b.from_xy(1, 2))
-
-
-def test_get_empty_mask():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])
+def test_fully_get_empty_mask(width, height):
+    b = Board(width, height)
     ref_mask = np.full(b.shape, fill_value=True)
-    assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
-
-    b.spawn(pos1=(0, 0), pos2=(2, 1))
-    ref_mask[(0, 0)] = False
-    ref_mask[(2, 1)] = False
     assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
 
 
@@ -119,51 +179,132 @@ def test_is_candy_pos():
             assert not b.from_xy(x, y) in b.candies
 
 
+def test_set_state():
+    b = Board(3, 2)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
+        candies=[]
+    )
+    assert b.player1_head == 2
+    assert b.player2_head == -2
+    assert b.player1_length == 2
+    assert b.player2_length == 2
+    assert b.last_player == -1
+    assert_array_equal(
+        b.grid_as_np(b.grid)[1:-1, 1:-1],
+        np.array([[1, 0], [2, -2], [0, -1]])
+    )
+    assert not b.candies
+
+    # reuse board
+    b0 = b.copy()
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 0], [1, 0]])),
+        snake2=Snake(id=1, positions=np.array([[2, 1], [1, 1]])),
+        candies=[]
+    )
+    assert b.player1_head == 2
+    assert b.player2_head == -2
+    assert b.player1_length == 2
+    assert b.player2_length == 2
+    assert b.last_player == -1
+    assert_array_equal(
+        b.grid_as_np(b.grid)[1:-1, 1:-1],
+        np.array([[2, 0], [1, -1], [0, -2]])
+    )
+    assert not b.candies
+    assert hash(b) != hash(b0)
+
+
+def test_get_is_empty_pos():
+    b = Board(3, 2)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),
+        candies=[]
+    )
+    assert not b.is_empty_pos(b.from_xy(1, 1))
+    assert not b.is_empty_pos(b.from_xy(1, 2))
+    assert not b.is_empty_pos(b.from_xy(3, 1))
+    assert not b.is_empty_pos(b.from_xy(3, 2))
+
+    assert b.is_empty_pos(b.from_xy(2, 1))
+
+
+def test_get_empty_mask():
+    b = Board(3, 2)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),
+        candies=[]
+    )
+    ref_mask = np.full(b.shape, fill_value=True)
+    ref_mask[(0, 0)] = False
+    ref_mask[(0, 1)] = False
+    ref_mask[(2, 0)] = False
+    ref_mask[(2, 1)] = False
+    assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
+
+
 def test_perform_move():
     b = Board(3, 3)
-    b.spawn(pos1=(0, 0), pos2=(2, 2))
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
+        candies=[]
+    )
     b0 = b.copy()
     # force hash computation
     assert hash(b) == hash(b0)
     assert b.approx_hash() == b0.approx_hash()
 
-    # move P1
+    # move P1 right
     b.perform_move(move=BoardMove.RIGHT, player=1)
-    assert b.player1_pos == b.from_xy(2, 1)
-    assert b.is_empty_pos(b.from_xy(1, 1))
+    assert b.player1_pos == b.from_xy(3, 1)
+    assert b.player2_pos == b.from_xy(2, 3)
+    assert not b.is_empty_pos(b.from_xy(3, 1))
     assert not b.is_empty_pos(b.from_xy(2, 1))
-    assert not b.is_empty_pos(b.from_xy(3, 3))
+    assert b.is_empty_pos(b.from_xy(1, 1))
 
     assert hash(b) != hash(b0)
     assert b.approx_hash() != b0.approx_hash()
 
-    # move P2
+    # move P2 left
     b.perform_move(move=BoardMove.LEFT, player=2)
-    assert b.player2_pos == b.from_xy(2, 3)
-    assert b.is_empty_pos(b.from_xy(1, 1))
-    assert b.is_empty_pos(b.from_xy(3, 3))
-    assert not b.is_empty_pos(b.from_xy(2, 1))
+    assert b.player2_pos == b.from_xy(1, 3)
+    assert b.player1_pos == b.from_xy(3, 1)
+    assert not b.is_empty_pos(b.from_xy(1, 3))
     assert not b.is_empty_pos(b.from_xy(2, 3))
+    assert b.is_empty_pos(b.from_xy(3, 3))
 
-    # move P1 to center
+    # move P1 up
     b.perform_move(move=BoardMove.UP, player=1)
-    assert b.player1_pos == b.from_xy(2, 2)
+    assert b.player1_pos == b.from_xy(3, 2)
 
 
 def test_perform_move_candy():
     b = Board(3, 3)
-    b.spawn(pos1=(0, 0), pos2=(2, 2))
-    candy_pos = (2, 1)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
+        candies=[]
+    )
+    candy_pos = (2, 2)
     b.candies.append(b.from_pos(candy_pos))
-    b.perform_move(move=BoardMove.RIGHT, player=1)
+    b.perform_move(move=BoardMove.UP, player=1)
     assert not b.candies  # candy should have been eaten
-    assert b.player1_length == 2
-    assert b.player2_length == 1
+    assert b.player1_length == 3
+    assert b.player2_length == 2
 
 
 def test_undo_move():
     b = Board(3, 3)
-    b.spawn(pos1=(0, 0), pos2=(2, 2))
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
+        candies=[]
+    )
     b_start = b.copy()
     with pytest.raises(Exception):
         b.undo_move(player=-1)
@@ -202,12 +343,16 @@ def test_undo_move():
 
 def test_undo_move_candy():
     b = Board(3, 3)
-    b.spawn(pos1=(0, 0), pos2=(2, 2))
-    candy_pos = (2, 1)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
+        candies=[]
+    )
+    candy_pos = (2, 2)
     b.candies.append(b.from_pos(candy_pos))
     b_start = b.copy()
 
-    b.perform_move(move=BoardMove.RIGHT, player=1)
+    b.perform_move(move=BoardMove.UP, player=1)
     assert not b.candies
     b.undo_move(player=1)
     assert b.candies
@@ -220,126 +365,61 @@ def test_undo_move_candy():
 def test_print():
     b = Board(3, 2)
     assert str(b) == '\n+---+\n|···|\n|···|\n+---+'
-    b.spawn(pos1=(1, 0), pos2=(2, 1))
-    assert str(b) == '\n+---+\n|··B|\n|·A·|\n+---+'
 
-    b.player1_length = 2
-    b.player2_length = 2
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
+        candies=[]
+    )
+    assert str(b) == '\n+---+\n|·Bb|\n|aA·|\n+---+'
+
     b.perform_move(BoardMove.RIGHT, player=1)
     b.perform_move(BoardMove.LEFT, player=-1)
-    assert str(b) == '\n+---+\n|·Bb|\n|·aA|\n+---+'
+    assert str(b) == '\n+---+\n|Bb·|\n|·aA|\n+---+'
 
 
 def test_move_generation():
-    b = Board(3, 2)
-    b.spawn(pos1=(1, 0), pos2=(2, 1))
+    b = Board(4, 3)
+    b.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[3, 2], [3, 1]])),
+        candies=[]
+    )
     moves1 = b.get_valid_moves_ordered(player=1)
-    assert len(moves1) == 3
-    assert BoardMove.LEFT in moves1
-    assert BoardMove.RIGHT in moves1
-    assert BoardMove.UP in moves1
+    assert set(moves1) == {BoardMove.RIGHT, BoardMove.UP}
 
     moves2 = b.get_valid_moves_ordered(player=-1)
-    assert len(moves2) == 2
-    assert BoardMove.LEFT in moves2
-    assert BoardMove.DOWN in moves2
+    assert set(moves2) == {BoardMove.LEFT}
 
     # perform a move and recheck the options
-    b.perform_move(BoardMove.LEFT, player=1)
+    b.perform_move(BoardMove.UP, player=1)
     moves12 = b.get_valid_moves_ordered(player=1)
-    assert len(moves12) == 2
-    assert BoardMove.RIGHT in moves12
-    assert BoardMove.UP in moves12
+    assert set(moves12) == {BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP}
 
     b.perform_move(BoardMove.LEFT, player=2)
     moves22 = b.get_valid_moves_ordered(2)
-    assert len(moves22) == 3
-    assert BoardMove.LEFT in moves22
-    assert BoardMove.RIGHT in moves22
-    assert BoardMove.DOWN in moves22
-
-
-def test_set_state():
-    b = Board(2, 2)
-    b.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[]
-    )
-    assert b.player1_head == 1
-    assert b.player2_head == -1
-    assert b.player1_length == 1
-    assert b.player2_length == 1
-    assert b.last_player == -1
-    assert_array_equal(
-        b.grid_as_np(b.grid)[1:-1, 1:-1],
-        np.array([[1, 0], [0, -1]])
-    )
-    assert not b.candies
-
-    # reuse board
-    b0 = b.copy()
-    b.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[]
-    )
-    assert b.player1_head == 2
-    assert b.player2_head == -1
-    assert b.player1_length == 2
-    assert b.player2_length == 1
-    assert b.last_player == -1
-    assert_array_equal(
-        b.grid_as_np(b.grid)[1:-1, 1:-1],
-        np.array([[1, 2], [0, -1]])
-    )
-    assert not b.candies
-    assert hash(b) != hash(b0)
-
-    b3 = Board(2, 2)
-    b3.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 0], [1, 1]])),
-        candies=[]
-    )
-    assert b3.player1_head == 2
-    assert b3.player2_head == -2
-    assert_array_equal(
-        b.grid_as_np(b3.grid)[1:-1, 1:-1],
-        np.array([[1, 2], [-2, -1]])
-    )
-    assert not b.candies
+    assert set(moves22) == {BoardMove.LEFT, BoardMove.DOWN}
 
 
 def test_set_state_candy():
     # one candy
-    b = Board(2, 2)
-    b.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[(1, 0)]
-    )
+    b = Board(3, 2)
+    snake1 = Snake(id=0, positions=np.array([[1, 0], [0, 0]]))
+    snake2 = Snake(id=1, positions=np.array([[1, 1], [2, 1]]))
+    b.set_state(snake1=snake1, snake2=snake2, candies=[(1, 1)])
     b1 = b.copy()
     assert b.candies
-    assert b.from_xy(2, 1) in b.candies
+    assert b.from_xy(2, 2) in b.candies
 
     # no candies (reuse board)
-    b.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[]
-    )
+    b.set_state(snake1=snake1, snake2=snake2, candies=[])
     assert not b.candies
-    assert not b.from_xy(2, 1) in b.candies
+    assert not b.from_xy(2, 2) in b.candies
 
     # two candies
-    b.set_state(
-        snake1=Snake(id=0, positions=np.array([[0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1]])),
-        candies=[(1, 0), (0, 1)]
-    )
+    b.set_state(snake1=snake1, snake2=snake2, candies=[(1, 1), (0, 1)])
     assert b.candies
-    assert b.from_xy(2, 1) in b.candies
+    assert b.from_xy(2, 2) in b.candies
     assert b.from_xy(1, 2) in b.candies
 
 

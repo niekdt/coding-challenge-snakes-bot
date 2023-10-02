@@ -43,45 +43,34 @@ class Direction(IntEnum):
     __str__ = Enum.__str__
 
 
-MOVES = (BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP, BoardMove.DOWN)
-POS_OFFSET = np.array((1, 1))
-# for np access
-ROW_OFFSET = (- 1, 1, 0, 0)
-COL_OFFSET = (0, 0, 1, -1)
+MOVES = (BoardMove.UP, BoardMove.RIGHT, BoardMove.DOWN, BoardMove.LEFT)
 
 MOVE_MAP = {
-    BoardMove.LEFT: Move.LEFT,
-    BoardMove.RIGHT: Move.RIGHT,
     BoardMove.UP: Move.UP,
-    BoardMove.DOWN: Move.DOWN
-}
-
-MOVE_TO_DIRECTION = {
-    BoardMove.UP: (0, 1),
-    BoardMove.DOWN: (0, -1),
-    BoardMove.LEFT: (-1, 0),
-    BoardMove.RIGHT: (1, 0),
+    BoardMove.RIGHT: Move.RIGHT,
+    BoardMove.DOWN: Move.DOWN,
+    BoardMove.LEFT: Move.LEFT,
 }
 
 OPPOSITE_MOVE = {
-    BoardMove.LEFT: BoardMove.RIGHT,
-    BoardMove.RIGHT: BoardMove.LEFT,
     BoardMove.UP: BoardMove.DOWN,
-    BoardMove.DOWN: BoardMove.UP
+    BoardMove.RIGHT: BoardMove.LEFT,
+    BoardMove.DOWN: BoardMove.UP,
+    BoardMove.LEFT: BoardMove.RIGHT,
 }
 
 TURN_LEFT_MOVE = {
-    BoardMove.LEFT: BoardMove.DOWN,
-    BoardMove.RIGHT: BoardMove.UP,
     BoardMove.UP: BoardMove.LEFT,
-    BoardMove.DOWN: BoardMove.RIGHT
+    BoardMove.RIGHT: BoardMove.UP,
+    BoardMove.DOWN: BoardMove.RIGHT,
+    BoardMove.LEFT: BoardMove.DOWN,
 }
 
 TURN_RIGHT_MOVE = {
-    BoardMove.LEFT: BoardMove.UP,
-    BoardMove.RIGHT: BoardMove.DOWN,
     BoardMove.UP: BoardMove.RIGHT,
-    BoardMove.DOWN: BoardMove.LEFT
+    BoardMove.RIGHT: BoardMove.DOWN,
+    BoardMove.DOWN: BoardMove.LEFT,
+    BoardMove.LEFT: BoardMove.UP,
 }
 
 FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[m]) for m in MOVES}
@@ -104,8 +93,10 @@ class Board:
         'move_stack', 'push_move_stack', 'pop_move_stack',
         'pos_map',
         'DISTANCE',
-        'FOUR_WAY_POSITIONS', 'FOUR_WAY_POSITIONS_FROM_POS',
-        'EIGHT_WAY_POSITIONS', 'EIGHT_WAY_POSITIONS_FROM_POS',
+        'FOUR_WAY_POSITIONS', 'FOUR_WAY_POSITIONS_ALL',
+        'FOUR_WAY_POSITIONS_FROM_POS', 'FOUR_WAY_POSITIONS_FROM_POS_ALL',
+        'EIGHT_WAY_POSITIONS', 'EIGHT_WAY_POSITIONS_ALL',
+        'EIGHT_WAY_POSITIONS_FROM_POS', 'EIGHT_WAY_POSITIONS_FROM_POS_ALL',
         'MOVE_POS_OFFSET',
         'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
         'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
@@ -145,12 +136,12 @@ class Board:
         self.DIR_LEFT = -self.full_height
 
         self.MOVE_POS_OFFSET = {
-            BoardMove.LEFT: self.DIR_LEFT,
-            BoardMove.RIGHT: self.DIR_RIGHT,
             BoardMove.UP: self.DIR_UP,
-            BoardMove.DOWN: self.DIR_DOWN
+            BoardMove.RIGHT: self.DIR_RIGHT,
+            BoardMove.DOWN: self.DIR_DOWN,
+            BoardMove.LEFT: self.DIR_LEFT
         }
-        self.FOUR_WAY_POS_OFFSETS = (self.DIR_LEFT, self.DIR_RIGHT, self.DIR_UP, self.DIR_DOWN)
+        self.FOUR_WAY_POS_OFFSETS = tuple(self.MOVE_POS_OFFSET[m] for m in MOVES)
         self.EIGHT_WAY_POS_OFFSETS = (
             self.DIR_UP_LEFT,
             self.DIR_UP,
@@ -167,8 +158,20 @@ class Board:
             for p1 in range(len(self.grid))
         ]
 
-        self.FOUR_WAY_POSITIONS: List[Tuple[PosIdx, PosIdx, PosIdx, PosIdx]] = [
-            (p + self.DIR_LEFT, p + self.DIR_RIGHT, p + 1, p - 1)
+        def is_within_bounds(pos):
+            if pos < 0 or pos >= len(self.grid):
+                return False
+            else:
+                x, y = self.from_index(pos)
+                return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
+
+        self.FOUR_WAY_POSITIONS_ALL: List[Tuple[PosIdx, ...]] = [
+            tuple(p + d for d in self.FOUR_WAY_POS_OFFSETS)
+            for p in range(len(self.grid))
+        ]
+
+        self.FOUR_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
+            tuple(filter(is_within_bounds, [p + d for d in self.FOUR_WAY_POS_OFFSETS]))
             for p in range(len(self.grid))
         ]
 
@@ -187,16 +190,35 @@ class Board:
             for pos_old in range(len(self.grid))
         ]
 
-        self.EIGHT_WAY_POSITIONS: List[
-            Tuple[PosIdx, PosIdx, PosIdx, PosIdx, PosIdx, PosIdx, PosIdx, PosIdx]] = [
-            (p + self.DIR_UP_LEFT, p + self.DIR_UP, p + self.DIR_UP_RIGHT, p + self.DIR_RIGHT,
-             p + self.DIR_DOWN_RIGHT, p + self.DIR_DOWN, p + self.DIR_DOWN_LEFT, p + self.DIR_LEFT)
+        self.FOUR_WAY_POSITIONS_FROM_POS_ALL: List[List] = [
+            [
+                _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS_ALL)
+                for pos_new in range(len(self.grid))
+            ]
+            for pos_old in range(len(self.grid))
+        ]
+
+        self.EIGHT_WAY_POSITIONS_ALL: List[Tuple[PosIdx, ...]] = [
+            tuple(p + d for d in self.EIGHT_WAY_POS_OFFSETS)
+            for p in range(len(self.grid))
+        ]
+
+        self.EIGHT_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
+            tuple(filter(is_within_bounds, [p + d for d in self.EIGHT_WAY_POS_OFFSETS]))
             for p in range(len(self.grid))
         ]
 
         self.EIGHT_WAY_POSITIONS_FROM_POS: List[List] = [
             [
                 _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS)
+                for pos_new in range(len(self.grid))
+            ]
+            for pos_old in range(len(self.grid))
+        ]
+
+        self.EIGHT_WAY_POSITIONS_FROM_POS_ALL: List[List] = [
+            [
+                _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS_ALL)
                 for pos_new in range(len(self.grid))
             ]
             for pos_old in range(len(self.grid))
@@ -258,7 +280,7 @@ class Board:
 
         # Start from top-left, clockwise
         return count_move_partitions(
-            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_POSITIONS[pos]]
+            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_POSITIONS_ALL[pos]]
         )
 
     def get_empty_mask(self) -> GridMask:
@@ -275,22 +297,23 @@ class Board:
             pos, prev_pos = self.player1_pos, self.player1_prev_pos
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
-        pos_options = self.FOUR_WAY_POSITIONS_FROM_POS[prev_pos][pos]
+
+        pos_options = self.FOUR_WAY_POSITIONS_ALL[pos]
         return self.lb <= self.grid[pos_options[0]] <= self.ub or \
             self.lb <= self.grid[pos_options[1]] <= self.ub or \
-            self.lb <= self.grid[pos_options[2]] <= self.ub
+            self.lb <= self.grid[pos_options[2]] <= self.ub or \
+            self.lb <= self.grid[pos_options[3]] <= self.ub
+        # def is_empty(p):
+        #     return self.lb <= self.grid[p] <= self.ub
+        #
+        # return any(filter(is_empty, self.FOUR_WAY_POSITIONS_FROM_POS[prev_pos][pos]))
 
     def count_moves(self, player: int) -> int:
         if player == 1:
             pos, prev_pos = self.player1_pos, self.player1_prev_pos
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
-        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_FROM_POS[prev_pos][pos]])
-
-    def count_moves_from(self, pos: PosIdx, prev_pos: PosIdx) -> int:
-        return sum(
-            [self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_FROM_POS[prev_pos][pos]]
-        )
+        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS[pos]])
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         if player == 1:
@@ -298,7 +321,8 @@ class Board:
         else:
             pos = self.player2_pos
 
-        def can_do(m): return self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub
+        def can_do(m):
+            return self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub
 
         return filter(can_do, order)
 
@@ -310,7 +334,7 @@ class Board:
         pos = self.player1_pos if player == 1 else self.player2_pos
         moves = list(compress(
             MOVES,
-            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS[pos])
+            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_ALL[pos])
         ))  # faster than tuple() AND list comprehension
         return [x for _, x in sorted(zip(order, moves))]
 
@@ -389,16 +413,6 @@ class Board:
         return free_space
 
     def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
-        """
-        Compute a lower bound on the amount of free space, including the current position
-        Uses depth-first search using a stack
-        :param mask: Padded logical matrix
-        :param pos: Position to scan from (inclusive)
-        :param lb: Count at least `lb` number of free spaces, if possible
-        :param max_dist: Maximum L1 distance from the origin to consider
-        :param distance_map: A mapping indicating the distance for the given position
-        :return: Counted free space
-        """
         free_space, candidate_pos_cache = 0, self.FOUR_WAY_POSITIONS
         stack: Deque[PosIdx] = deque(maxlen=128)
         stack.append(pos)

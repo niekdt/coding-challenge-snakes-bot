@@ -56,17 +56,27 @@ def test_distance(width, height):
 @pytest.mark.parametrize('height', [4, 16])
 def test_four_way_positions(width, height):
     b = Board(width, height)
-    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
-        p = b.from_xy(x, y)
-        positions = b.FOUR_WAY_POSITIONS[p]
-        ref_positions = (
+
+    assert isinstance(b.FOUR_WAY_POS_OFFSETS, tuple)
+    assert isinstance(b.FOUR_WAY_POSITIONS, list)
+
+    def is_within_bounds(pos):
+        if pos < 0 or pos >= len(b.grid):
+            return False
+        else:
+            xx, yy = b.from_index(pos)
+            return 0 < xx <= width and 0 < yy <= height
+
+    for x, y in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+        ref_positions = list(filter(is_within_bounds, (
             b.from_xy(x - 1, y),
             b.from_xy(x + 1, y),
             b.from_xy(x, y - 1),
             b.from_xy(x, y + 1)
-        )
+        )))
+        p = b.from_xy(x, y)
+        positions = b.FOUR_WAY_POSITIONS[p]
         assert isinstance(positions, tuple)
-        assert len(positions) == 4
         assert set(positions) == set(ref_positions)
 
 
@@ -84,7 +94,6 @@ def test_four_way_trans_positions(width, height):
             assert isinstance(positions, tuple)
             ref_positions = set(all_positions)
             ref_positions.remove(p_old)
-            assert len(positions) == 3
             assert set(positions) == set(ref_positions)
 
 
@@ -92,16 +101,26 @@ def test_four_way_trans_positions(width, height):
 @pytest.mark.parametrize('height', [4, 16])
 def test_eight_way_positions(width, height):
     b = Board(width, height)
-    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
-        p = b.from_xy(x, y)
-        positions = b.EIGHT_WAY_POSITIONS[p]
-        ref_positions = tuple(
+
+    assert isinstance(b.EIGHT_WAY_POS_OFFSETS, tuple)
+    assert isinstance(b.EIGHT_WAY_POSITIONS, list)
+
+    def is_within_bounds(pos):
+        if pos < 0 or pos >= len(b.grid):
+            return False
+        else:
+            xx, yy = b.from_index(pos)
+            return 0 < xx <= width and 0 < yy <= height
+
+    for x, y in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+        ref_positions = list(filter(is_within_bounds, (
             b.from_xy(x + xo, y + yo)
             for xo, yo in itertools.product([-1, 0, 1], repeat=2)
             if xo != 0 or yo != 0
-        )
+        )))
+        p = b.from_xy(x, y)
+        positions = b.EIGHT_WAY_POSITIONS[p]
         assert isinstance(positions, tuple)
-        assert len(positions) == 8
         assert set(positions) == set(ref_positions)
 
 
@@ -119,7 +138,6 @@ def test_eight_way_trans_positions(width, height):
             assert isinstance(positions, tuple)
             ref_positions = set(all_positions)
             ref_positions.remove(p_old)
-            assert len(positions) == 7
             assert set(positions) == set(ref_positions)
 
 

@@ -10,10 +10,11 @@ from ..board import Board, as_move, count_move_partitions, BoardMove
 from ....snake import Snake
 
 
-def test_init():
-    b = Board(2, 3)
-    assert b.shape == (2, 3)
-    assert len(b.grid) == 4 * 5
+@pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])
+def test_init(width, height):
+    b = Board(width, height)
+    assert b.shape == (width, height)
+    assert len(b.grid) == (width + 2) * (height + 2)
 
     for x in range(0, b.full_width):
         assert b.grid[b.from_xy(x, 0)] != 0
@@ -30,11 +31,13 @@ def test_init():
     assert b.approx_hash() != 0
 
 
-def test_empty_hash():
-    assert hash(Board(4, 4)) == hash(Board(4, 4))
-    assert Board(4, 4).approx_hash() == Board(4, 4).approx_hash()
+@pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])
+def test_empty_hash(width, height):
+    assert hash(Board(width, height)) == hash(Board(width, height))
+    assert Board(width, height).approx_hash() == Board(width, height).approx_hash()
 
-    assert hash(Board(4, 4)) != hash(Board(4, 5))
+    assert hash(Board(width, height)) != hash(Board(width + 1, height))
+    assert hash(Board(width, height)) != hash(Board(width, height + 1))
 
 
 @pytest.mark.parametrize('width', [4, 16])
@@ -144,26 +147,27 @@ def test_fully_get_empty_mask(width, height):
     assert_array_equal(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1], ref_mask)
 
 
-def test_spawn_candy():
-    b = Board(3, 2)
-    b0 = b.copy()
+@pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
+def test_spawn_candy(width, height):
+    b = Board(width, height)
     assert not b.candies
     b.candies.append(b.from_xy(1, 2))
     assert b.candies
     assert b.from_xy(1, 2) in b.candies
 
 
-def test_remove_candy():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
+def test_remove_candy(width, height):
+    b = Board(width, height)
     b.candies.append(b.from_xy(1, 2))
-    b0 = b.copy()
     b.candies.remove(b.from_xy(1, 2))
     assert not b.candies
     assert not b.from_xy(1, 2) in b.candies
 
 
-def test_is_candy_pos():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])
+def test_is_candy_pos(width, height):
+    b = Board(width, height)
     for x, y in itertools.product(range(b.width), range(b.height)):
         assert not b.from_xy(x, y) in b.candies
 
@@ -217,8 +221,9 @@ def test_set_state():
     assert hash(b) != hash(b0)
 
 
-def test_get_is_empty_pos():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
+def test_get_is_empty_pos(width, height):
+    b = Board(width, height)
     b.set_state(
         snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),
@@ -232,8 +237,9 @@ def test_get_is_empty_pos():
     assert b.is_empty_pos(b.from_xy(2, 1))
 
 
-def test_get_empty_mask():
-    b = Board(3, 2)
+@pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
+def test_get_empty_mask(width, height):
+    b = Board(width, height)
     b.set_state(
         snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),

@@ -93,10 +93,10 @@ class Board:
         'move_stack', 'push_move_stack', 'pop_move_stack',
         'pos_map',
         'DISTANCE',
-        'FOUR_WAY_POSITIONS', 'FOUR_WAY_POSITIONS_ALL',
-        'FOUR_WAY_POSITIONS_FROM_POS', 'FOUR_WAY_POSITIONS_FROM_POS_ALL',
-        'EIGHT_WAY_POSITIONS', 'EIGHT_WAY_POSITIONS_ALL',
-        'EIGHT_WAY_POSITIONS_FROM_POS', 'EIGHT_WAY_POSITIONS_FROM_POS_ALL',
+        'FOUR_WAY_POSITIONS_COND', 'FOUR_WAY_POSITIONS',
+        'FOUR_WAY_POSITIONS_FROM_POS_COND', 'FOUR_WAY_POSITIONS_FROM_POS',
+        'EIGHT_WAY_POSITIONS_COND', 'EIGHT_WAY_POSITIONS',
+        'EIGHT_WAY_POSITIONS_FROM_POS_COND', 'EIGHT_WAY_POSITIONS_FROM_POS',
         'MOVE_POS_OFFSET',
         'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
         'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
@@ -165,12 +165,12 @@ class Board:
                 x, y = self.from_index(pos)
                 return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
 
-        self.FOUR_WAY_POSITIONS_ALL: List[Tuple[PosIdx, ...]] = [
+        self.FOUR_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
             tuple(p + d for d in self.FOUR_WAY_POS_OFFSETS)
             for p in range(len(self.grid))
         ]
 
-        self.FOUR_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
+        self.FOUR_WAY_POSITIONS_COND: List[Tuple[PosIdx, ...]] = [
             tuple(filter(is_within_bounds, [p + d for d in self.FOUR_WAY_POS_OFFSETS]))
             for p in range(len(self.grid))
         ]
@@ -182,6 +182,14 @@ class Board:
             else:
                 return candidate_positions
 
+        self.FOUR_WAY_POSITIONS_FROM_POS_COND: List[List] = [
+            [
+                _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS_COND)
+                for pos_new in range(len(self.grid))
+            ]
+            for pos_old in range(len(self.grid))
+        ]
+
         self.FOUR_WAY_POSITIONS_FROM_POS: List[List] = [
             [
                 _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS)
@@ -190,35 +198,27 @@ class Board:
             for pos_old in range(len(self.grid))
         ]
 
-        self.FOUR_WAY_POSITIONS_FROM_POS_ALL: List[List] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS_ALL)
-                for pos_new in range(len(self.grid))
-            ]
-            for pos_old in range(len(self.grid))
-        ]
-
-        self.EIGHT_WAY_POSITIONS_ALL: List[Tuple[PosIdx, ...]] = [
+        self.EIGHT_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
             tuple(p + d for d in self.EIGHT_WAY_POS_OFFSETS)
             for p in range(len(self.grid))
         ]
 
-        self.EIGHT_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
+        self.EIGHT_WAY_POSITIONS_COND: List[Tuple[PosIdx, ...]] = [
             tuple(filter(is_within_bounds, [p + d for d in self.EIGHT_WAY_POS_OFFSETS]))
             for p in range(len(self.grid))
+        ]
+
+        self.EIGHT_WAY_POSITIONS_FROM_POS_COND: List[List] = [
+            [
+                _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS_COND)
+                for pos_new in range(len(self.grid))
+            ]
+            for pos_old in range(len(self.grid))
         ]
 
         self.EIGHT_WAY_POSITIONS_FROM_POS: List[List] = [
             [
                 _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS)
-                for pos_new in range(len(self.grid))
-            ]
-            for pos_old in range(len(self.grid))
-        ]
-
-        self.EIGHT_WAY_POSITIONS_FROM_POS_ALL: List[List] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS_ALL)
                 for pos_new in range(len(self.grid))
             ]
             for pos_old in range(len(self.grid))
@@ -280,7 +280,7 @@ class Board:
 
         # Start from top-left, clockwise
         return count_move_partitions(
-            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_POSITIONS_ALL[pos]]
+            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_POSITIONS[pos]]
         )
 
     def get_empty_mask(self) -> GridMask:
@@ -298,7 +298,7 @@ class Board:
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
 
-        pos_options = self.FOUR_WAY_POSITIONS_ALL[pos]
+        pos_options = self.FOUR_WAY_POSITIONS[pos]
         return self.lb <= self.grid[pos_options[0]] <= self.ub or \
             self.lb <= self.grid[pos_options[1]] <= self.ub or \
             self.lb <= self.grid[pos_options[2]] <= self.ub or \
@@ -313,7 +313,7 @@ class Board:
             pos, prev_pos = self.player1_pos, self.player1_prev_pos
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
-        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS[pos]])
+        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_COND[pos]])
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         if player == 1:
@@ -334,7 +334,7 @@ class Board:
         pos = self.player1_pos if player == 1 else self.player2_pos
         moves = list(compress(
             MOVES,
-            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_ALL[pos])
+            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS[pos])
         ))  # faster than tuple() AND list comprehension
         return [x for _, x in sorted(zip(order, moves))]
 
@@ -394,7 +394,7 @@ class Board:
         self.last_player = -self.last_player
 
     def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
-        mask[pos], free_space, candidate_pos_cache = False, 1, self.FOUR_WAY_POSITIONS_FROM_POS
+        mask[pos], free_space, candidate_pos_cache = False, 1, self.FOUR_WAY_POSITIONS_FROM_POS_COND
         queue: Deque[Tuple[PosIdx, PosIdx, int]] = deque(maxlen=max_dist * 4)
         queue.append((pos, 0, 0))
 
@@ -413,7 +413,7 @@ class Board:
         return free_space
 
     def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
-        free_space, candidate_pos_cache = 0, self.FOUR_WAY_POSITIONS
+        free_space, candidate_pos_cache = 0, self.FOUR_WAY_POSITIONS_COND
         stack: Deque[PosIdx] = deque(maxlen=128)
         stack.append(pos)
 

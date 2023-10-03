@@ -58,7 +58,7 @@ def test_four_way_positions(width, height):
     b = Board(width, height)
 
     assert isinstance(b.FOUR_WAY_POS_OFFSETS, tuple)
-    assert isinstance(b.FOUR_WAY_POSITIONS, list)
+    assert isinstance(b.FOUR_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
         if pos < 0 or pos >= len(b.grid):
@@ -75,7 +75,7 @@ def test_four_way_positions(width, height):
             b.from_xy(x, y + 1)
         )))
         p = b.from_xy(x, y)
-        positions = b.FOUR_WAY_POSITIONS[p]
+        positions = b.FOUR_WAY_POSITIONS_COND[p]
         assert isinstance(positions, tuple)
         assert set(positions) == set(ref_positions)
 
@@ -86,10 +86,10 @@ def test_four_way_trans_positions(width, height):
     b = Board(width, height)
     for x, y in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
         p = b.from_xy(x, y)
-        all_positions = b.FOUR_WAY_POSITIONS[p]
+        all_positions = b.FOUR_WAY_POSITIONS_COND[p]
         for p_old in all_positions:
-            assert isinstance(b.FOUR_WAY_POSITIONS_FROM_POS[p_old], list)
-            positions = b.FOUR_WAY_POSITIONS_FROM_POS[p_old][p]
+            assert isinstance(b.FOUR_WAY_POSITIONS_FROM_POS_COND[p_old], list)
+            positions = b.FOUR_WAY_POSITIONS_FROM_POS_COND[p_old][p]
             assert positions is not None
             assert isinstance(positions, tuple)
             ref_positions = set(all_positions)
@@ -103,7 +103,7 @@ def test_eight_way_positions(width, height):
     b = Board(width, height)
 
     assert isinstance(b.EIGHT_WAY_POS_OFFSETS, tuple)
-    assert isinstance(b.EIGHT_WAY_POSITIONS, list)
+    assert isinstance(b.EIGHT_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
         if pos < 0 or pos >= len(b.grid):
@@ -119,7 +119,7 @@ def test_eight_way_positions(width, height):
             if xo != 0 or yo != 0
         )))
         p = b.from_xy(x, y)
-        positions = b.EIGHT_WAY_POSITIONS[p]
+        positions = b.EIGHT_WAY_POSITIONS_COND[p]
         assert isinstance(positions, tuple)
         assert set(positions) == set(ref_positions)
 
@@ -130,10 +130,10 @@ def test_eight_way_trans_positions(width, height):
     b = Board(width, height)
     for x, y in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
         p = b.from_xy(x, y)
-        all_positions = b.EIGHT_WAY_POSITIONS[p]
+        all_positions = b.EIGHT_WAY_POSITIONS_COND[p]
         for p_old in all_positions:
-            assert isinstance(b.EIGHT_WAY_POSITIONS_FROM_POS[p_old], list)
-            positions = b.EIGHT_WAY_POSITIONS_FROM_POS[p_old][p]
+            assert isinstance(b.EIGHT_WAY_POSITIONS_FROM_POS_COND[p_old], list)
+            positions = b.EIGHT_WAY_POSITIONS_FROM_POS_COND[p_old][p]
             assert positions is not None
             assert isinstance(positions, tuple)
             ref_positions = set(all_positions)

@@ -393,36 +393,30 @@ class Board:
 
         self.last_player = -self.last_player
 
-    def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int) -> int:
-        mask[pos], free_space, candidate_pos_cache = False, 1, self.FOUR_WAY_POSITIONS_FROM_POS_COND
-        queue: Deque[Tuple[PosIdx, PosIdx, int]] = deque(maxlen=max_dist * 4)
-        queue.append((pos, 0, 0))
+    def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int, prev_pos: PosIdx = 0) -> int:
+        mask[pos], free_space, cur_dist, pos_options, queue = \
+            False, 1, 0, self.FOUR_WAY_POSITIONS_FROM_POS_COND, deque(maxlen=128)
 
-        while queue and free_space < lb:
-            cur_pos, prev_pos, cur_dist = queue.popleft()
-
-            if cur_dist >= max_dist:
+        while free_space < lb and cur_dist < max_dist:
+            for new_pos in pos_options[prev_pos][pos]:
+                if mask[new_pos]:
+                    mask[new_pos], free_space = False, free_space + 1
+                    queue.append((new_pos, pos, cur_dist + 1))
+            if not queue:
                 break
-
-            for new_pos in candidate_pos_cache[prev_pos][cur_pos]:
-                if not mask[new_pos]:
-                    continue
-                mask[new_pos], free_space = False, free_space + 1
-                queue.append((new_pos, cur_pos, cur_dist + 1))
+            pos, prev_pos, cur_dist = queue.popleft()
 
         return free_space
 
     def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
-        free_space, candidate_pos_cache = 0, self.FOUR_WAY_POSITIONS_COND
-        stack: Deque[PosIdx] = deque(maxlen=128)
-        stack.append(pos)
+        stack, free_space, pos_options = [pos], 0, self.FOUR_WAY_POSITIONS_COND
 
         while stack and free_space < lb:
-            cur_pos = stack.pop()
-            if not mask[cur_pos] or distance_map[cur_pos] > max_dist:
+            pos = stack.pop()
+            if not mask[pos] or distance_map[pos] > max_dist:
                 continue
-            mask[cur_pos], free_space = False, free_space + 1
-            stack.extend(candidate_pos_cache[cur_pos])
+            mask[pos], free_space = False, free_space + 1
+            stack.extend(pos_options[pos])
 
         return free_space
 

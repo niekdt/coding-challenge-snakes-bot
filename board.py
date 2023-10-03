@@ -43,7 +43,7 @@ class Direction(IntEnum):
     __str__ = Enum.__str__
 
 
-MOVES = (BoardMove.UP, BoardMove.RIGHT, BoardMove.DOWN, BoardMove.LEFT)
+MOVES = (BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP, BoardMove.DOWN)
 
 MOVE_MAP = {
     BoardMove.UP: Move.UP,

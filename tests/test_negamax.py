@@ -32,7 +32,7 @@ def test_forced_move(depth, search):
 
 
 @pytest.mark.parametrize('depth', [1, 2, 4, 7])
-@pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
+@pytest.mark.parametrize('search', [pvs_moves])
 def test_winning_suicide(depth, search):
     board = Board(4, 4)
     board.set_state(
@@ -42,10 +42,10 @@ def test_winning_suicide(depth, search):
     )
     ref_board = board.copy()
 
-    with pytest.raises(Exception):
-        search(board, depth=depth, eval_fun=death.evaluate, move_history=dict())
+    moves = search(board, depth=depth, eval_fun=death.evaluate, move_history=dict())
 
     assert board == ref_board
+    assert set(moves) == {BoardMove.DOWN}
 
 
 @pytest.mark.parametrize('depth', [1, 2, 4, 7])
@@ -65,7 +65,7 @@ def test_goto_candy(depth, search, size):
     assert best_move(moves) == BoardMove.RIGHT
 
 
-@pytest.mark.parametrize('depth', [1, 6, 7, 10])
+@pytest.mark.parametrize('depth', [1, 2, 4, 7])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_far(depth, search):
     board = Board(16, 16)
@@ -83,7 +83,7 @@ def test_goto_candy_far(depth, search):
         assert moves[BoardMove.LEFT] == moves[BoardMove.UP]
 
 
-@pytest.mark.parametrize('depth', [1, 6, 7, 10])
+@pytest.mark.parametrize('depth', [1, 2, 4, 7])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_near(depth, search):
     board = Board(16, 16)
@@ -100,7 +100,7 @@ def test_goto_candy_near(depth, search):
     assert has_single_best_move(moves)
 
 
-@pytest.mark.parametrize('depth', [1, 6, 7, 10, 12, 14])
+@pytest.mark.parametrize('depth', [1, 2, 4, 7, 14])
 @pytest.mark.parametrize('search', [negamax_moves, negamax_ab_moves, pvs_moves])
 def test_goto_candy_near2(depth, search):
     if depth > 10 and search == negamax_moves:

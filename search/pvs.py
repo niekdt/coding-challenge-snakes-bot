@@ -15,7 +15,7 @@ def pvs_moves(
 ) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
-        raise Exception('ayy lmao')
+        return {board.MOVE_FROM_TRANS[board.player1_pos][board.player1_prev_pos]: inf}
 
     board_hash = hash(board)
     move_order = move_history.get(board_hash, board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos])

@@ -17,18 +17,14 @@ def pvs_moves(
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
-    root_moves = MOVES
-    # root_moves: Tuple[BoardMove] = board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos]
     board_hash = hash(board)
-    move_order = move_history.get(board_hash, root_moves)
-    moves = board.get_valid_moves_ordered(player=1, order=move_order)
+    move_order = move_history.get(board_hash, board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos])
+    moves = list(board.iterate_valid_moves(player=1, order=move_order))
 
-    alpha = -inf
-    beta = inf
-    best_move = BOARD_MOVE_UP
+    alpha, beta = -inf, inf
+    best_move, best_value = BOARD_MOVE_UP, -inf
     score_history = dict()
 
-    best_value = -inf
     for move in moves:
         if best_value == -inf and move == moves[-1]:
             if __debug__:
@@ -57,8 +53,7 @@ def pvs_moves(
             print(f'\tGot score {value}')
         board.undo_move(player=1)
         if value > best_value:
-            best_move = move
-            best_value = value
+            best_move, best_value = move, value
         alpha = max(alpha, value)
 
     return {best_move: best_value}

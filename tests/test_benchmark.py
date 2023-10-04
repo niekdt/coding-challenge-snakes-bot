@@ -21,16 +21,13 @@ def cleanup():
 
 @pytest.mark.parametrize('grid', [16])
 @pytest.mark.parametrize('seed', [1] * 6)
-@pytest.mark.parametrize('max_turns', [500])  # time to beat: 19.6s for BFS, 7.7s for DFS
+@pytest.mark.parametrize('max_turns', [500])  # time to beat: 17.5s
 def test_play_deep_game(grid, seed, max_turns):
     random.seed(seed)
     grid_size = (grid, grid)
     snake1 = Snake(id=0, positions=np.array([[0, 0], [0, 1]]))
     snake2 = Snake(id=1, positions=np.array([[2, 2], [2, 1]]))
-    snakes = [snake1, snake2]
-
-    agents = {0: Snek, 1: Slifer}
-    game = Game(grid_size=grid_size, agents=agents, round_type=RoundType.TURNS, snakes=snakes)
+    game = Game(grid_size=grid_size, agents={0: Snek, 1: Slifer}, round_type=RoundType.TURNS, snakes=[snake1, snake2])
 
     while not game.finished() and game.turns < max_turns:
         game.update()

@@ -73,7 +73,7 @@ TURN_RIGHT_MOVE = {
     BoardMove.LEFT: BoardMove.UP,
 }
 
-FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m], OPPOSITE_MOVE[m]) for m in MOVES}
+FIRST_MOVE_ORDER = {m: (m, TURN_LEFT_MOVE[m], TURN_RIGHT_MOVE[m]) for m in MOVES}
 
 
 class Board:
@@ -341,7 +341,7 @@ class Board:
             pos, prev_pos = self.player1_pos, self.player1_prev_pos
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
-        return sum([self.grid_mask[p] for p in self.FOUR_WAY_POSITIONS_COND[pos]])
+        return sum([self.grid_mask[p] for p in self.FOUR_WAY_POSITIONS_FROM_POS_COND[prev_pos][pos]])
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         if player == 1:

@@ -21,7 +21,7 @@ def cleanup():
 
 @pytest.mark.parametrize('grid', [16])
 @pytest.mark.parametrize('seed', [1] * 6)
-@pytest.mark.parametrize('max_turns', [500])  # time to beat: 4.2s for BFS, 7.7s for DFS
+@pytest.mark.parametrize('max_turns', [500])  # time to beat: 19.6s for BFS, 7.7s for DFS
 def test_play_deep_game(grid, seed, max_turns):
     random.seed(seed)
     grid_size = (grid, grid)

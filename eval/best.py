@@ -13,11 +13,7 @@ def evaluate(board: Board, player: int) -> float:
     p2_dist = board.DISTANCE[p2_pos]
 
     # candy dist
-    if board.candies:
-        d1 = sum([p1_dist[candy_pos] for candy_pos in board.candies])
-        d2 = sum([p2_dist[candy_pos] for candy_pos in board.candies])
-
-        score += 10 * (d2 - d1)
+    score += 10 * sum([p2_dist[candy_pos] - p1_dist[candy_pos] for candy_pos in board.candies])
 
     # free space lower bound
     lb = 32

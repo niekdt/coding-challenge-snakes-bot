@@ -24,8 +24,8 @@ def evaluate(board: Board, player: int) -> float:
 
     f1 = min(lb, board.count_free_space_dfs(board.get_empty_mask(), pos=p1_pos, lb=lb, max_dist=6, distance_map=p1_dist))
     f2 = min(lb, board.count_free_space_dfs(board.get_empty_mask(), pos=p2_pos, lb=lb, max_dist=6, distance_map=p2_dist))
-    # f1 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p1_pos, lb=lb, max_dist=6))
-    # f2 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p2_pos, lb=lb, max_dist=6))
+    #f1 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p1_pos, prev_pos=board.player1_prev_pos, lb=lb, max_dist=6))
+    #f2 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p2_pos, prev_pos=board.player2_prev_pos, lb=lb, max_dist=6))
     score += 10000 * (f1 - f2)
 
     # distance to center

@@ -318,6 +318,9 @@ def test_perform_move():
     b.perform_move(move=BoardMove.UP, player=1)
     assert b.player1_pos == b.from_xy(3, 2)
     assert b.player1_prev_pos == b.from_xy(3, 1)
+    assert not b.is_empty_pos(b.from_xy(3, 2))
+    assert not b.is_empty_pos(b.from_xy(3, 1))
+    assert b.is_empty_pos(b.from_xy(2, 1))
 
 
 def test_perform_move_candy():
@@ -333,6 +336,13 @@ def test_perform_move_candy():
     assert not b.candies  # candy should have been eaten
     assert b.player1_length == 3
     assert b.player2_length == 2
+    # P1
+    assert not b.is_empty_pos(b.from_xy(2, 2))
+    assert not b.is_empty_pos(b.from_xy(2, 1))
+    assert not b.is_empty_pos(b.from_xy(1, 1))
+    # P2
+    assert not b.is_empty_pos(b.from_xy(2, 3))
+    assert not b.is_empty_pos(b.from_xy(3, 3))
 
 
 def test_undo_move():
@@ -342,36 +352,53 @@ def test_undo_move():
         snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
         candies=[]
     )
+    assert not b.is_empty_pos(b.from_xy(2, 1))  # P1 pos
+    assert not b.is_empty_pos(b.from_xy(1, 1))  # P1 prev pos
+    assert not b.is_empty_pos(b.from_xy(2, 3))  # P2 pos
+    assert not b.is_empty_pos(b.from_xy(3, 3))  # P2 prev pos
+
     b_start = b.copy()
-    with pytest.raises(Exception):
-        b.undo_move(player=-1)
     b.perform_move(move=BoardMove.RIGHT, player=1)
     b.undo_move(player=1)
     assert b == b_start
+    assert b.player1_length == 2
+    assert b.player2_length == 2
     assert b.player1_pos == b.from_xy(2, 1)
     assert b.player2_pos == b.from_xy(2, 3)
     assert b.player1_prev_pos == b.from_xy(1, 1)
     assert b.player2_prev_pos == b.from_xy(3, 3)
+    assert b.is_empty_pos(b.from_xy(3, 1))  # P1 moved back out of here
+    assert not b.is_empty_pos(b.from_xy(2, 1))  # P1 pos
+    assert not b.is_empty_pos(b.from_xy(1, 1))  # P1 prev pos
+    assert not b.is_empty_pos(b.from_xy(2, 3))  # P2 pos
+    assert not b.is_empty_pos(b.from_xy(3, 3))  # P2 prev pos
     assert hash(b) == hash(b_start)
     assert b.approx_hash() == b_start.approx_hash()
 
-    with pytest.raises(Exception):
-        b.undo_move(player=1)
-    with pytest.raises(Exception):
-        b.undo_move(player=-1)
-
     b.perform_move(move=BoardMove.RIGHT, player=1)
-    with pytest.raises(Exception):
-        b.undo_move(player=-1)  # cannot undo because P1 moved last
+    assert b.player1_pos == b.from_xy(3, 1)
+    assert not b.is_empty_pos(b.from_xy(3, 1))  # cur pos
+    assert not b.is_empty_pos(b.from_xy(2, 1))  # prev pos
+    assert b.is_empty_pos(b.from_xy(1, 1))
+
     b_ref2 = b.copy()
     b.perform_move(move=BoardMove.LEFT, player=-1)
+    assert b.player2_pos == b.from_xy(1, 3)
+    assert not b.is_empty_pos(b.from_xy(1, 3))  # cur pos
+    assert not b.is_empty_pos(b.from_xy(2, 3))  # prev pos
+    assert b.is_empty_pos(b.from_xy(3, 3))
 
     b.undo_move(player=-1)
     assert b == b_ref2
+    assert b.player1_length == 2
+    assert b.player2_length == 2
     assert b.player1_pos == b.from_xy(3, 1)
     assert b.player2_pos == b.from_xy(2, 3)
     assert b.player1_prev_pos == b.from_xy(2, 1)
     assert b.player2_prev_pos == b.from_xy(3, 3)
+    assert b.is_empty_pos(b.from_xy(1, 3))  # P2 moved back out of here
+    assert not b.is_empty_pos(b.from_xy(2, 3))
+    assert not b.is_empty_pos(b.from_xy(3, 3))
     assert hash(b) == hash(b_ref2)
     assert b.approx_hash() == b_ref2.approx_hash()
 
@@ -379,11 +406,6 @@ def test_undo_move():
     assert b == b_start
     assert hash(b) == hash(b_start)
     assert b.approx_hash() == b_start.approx_hash()
-
-    with pytest.raises(Exception):
-        b.undo_move(player=1)
-    with pytest.raises(Exception):
-        b.undo_move(player=-1)
 
 
 def test_undo_move_candy():
@@ -419,6 +441,8 @@ def test_print():
     assert str(b) == '\n+---+\n|·Bb|\n|aA·|\n+---+'
 
     b.perform_move(BoardMove.RIGHT, player=1)
+    assert str(b) == '\n+---+\n|·Bb|\n|·aA|\n+---+'
+
     b.perform_move(BoardMove.LEFT, player=-1)
     assert str(b) == '\n+---+\n|Bb·|\n|·aA|\n+---+'
 
@@ -492,8 +516,8 @@ def test_count_free_space_dfs(size, lb):
     assert space >= min(lb, size ** 2)
 
     # insert wall
-    b.grid[b.from_xy(2, 1)] = 100
-    b.grid[b.from_xy(2, 2)] = 100
+    b.grid_mask[b.from_xy(2, 1)] = False
+    b.grid_mask[b.from_xy(2, 2)] = False
     space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
     assert space == size ** 2 - 2
 
@@ -503,7 +527,7 @@ def test_count_free_space_dfs(size, lb):
     if size >= 3:
         # insert void
         for y in range(b.full_height):
-            b.grid[b.from_xy(2, y)] = 100
+            b.grid_mask[b.from_xy(2, y)] = False
         space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
         assert space == size
         space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
@@ -526,7 +550,7 @@ def test_count_free_space_bfs(size, lb):
     if size >= 3:
         # insert void
         for y in range(b.full_height):
-            b.grid[b.from_xy(2, y)] = 100
+            b.grid_mask[b.from_xy(2, y)] = False
         space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=1000)
         assert space == size
         space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=lb)

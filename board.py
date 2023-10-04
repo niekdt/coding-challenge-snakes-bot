@@ -463,12 +463,8 @@ class Board:
     def __hash__(self) -> int:
         if self.hash == 0:
             self.hash = hash((
-                tuple(self.grid_mask),
                 tuple(self.player1_positions[-self.player1_length:]),
-                tuple(self.player2_positions[-self.player2_length:]),
-                self.player1_pos,
-                self.player2_pos,
-                self.last_player
+                tuple(self.player2_positions[-self.player2_length:])
             ))
         return self.hash
 

@@ -85,6 +85,8 @@ class Board:
         'candies', 'spawn_candy', 'remove_candy',
         'player1_pos', 'player2_pos',
         'player1_positions', 'player2_positions',
+        'push_player1_position', 'push_player2_position',
+        'pop_player1_position', 'pop_player2_position',
         'player1_prev_pos', 'player2_prev_pos',
         'player1_length', 'player2_length',
         'hash',
@@ -114,6 +116,8 @@ class Board:
         self.player2_pos: PosIdx = -10
         self.player1_positions: List[PosIdx] = []
         self.player2_positions: List[PosIdx] = []
+        self.push_player1_position, self.push_player2_position = self.player1_positions.append, self.player2_positions.append
+        self.pop_player1_position, self.pop_player2_position = self.player1_positions.pop, self.player2_positions.pop
         self.player1_prev_pos: PosIdx = -10
         self.player2_prev_pos: PosIdx = -10
         self.player1_length, self.player2_length = 0, 0
@@ -238,10 +242,16 @@ class Board:
 
         # clear grid
         self.grid_mask = create_grid(self.width, self.height)
-        self.move_stack.clear()
-        self.candies.clear()
+        self.move_stack = []
+        self.push_move_stack, self.pop_move_stack = self.move_stack.append, self.move_stack.pop
+        self.candies = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in candies]
+        self.spawn_candy, self.remove_candy = self.candies.append, self.candies.remove  # keep separate from candies assignment
+
+        # player positions
         self.player1_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake1.positions)]
         self.player2_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake2.positions)]
+        self.push_player1_position, self.push_player2_position, self.pop_player1_position, self.pop_player2_position = \
+            self.player1_positions.append, self.player2_positions.append, self.player1_positions.pop, self.player2_positions.pop
 
         for pos in chain(self.player1_positions, self.player2_positions):
             self.grid_mask[pos] = False
@@ -249,10 +259,6 @@ class Board:
         self.player1_length, self.player2_length = len(snake1.positions), len(snake2.positions)
         self.player1_pos, self.player1_prev_pos = self.player1_positions[-1], self.player1_positions[-2]
         self.player2_pos, self.player2_prev_pos = self.player2_positions[-1], self.player2_positions[-2]
-
-        # spawn candies
-        for pos in candies:
-            self.spawn_candy(self.from_pos(pos) + self.DIR_UP_RIGHT)
 
         self.last_player, self.hash = -1, 0
 
@@ -346,7 +352,7 @@ class Board:
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.player1_positions.append(target_pos)
+            self.push_player1_position(target_pos)
             self.push_move_stack((
                 self.player1_pos,
                 self.player1_prev_pos,
@@ -366,7 +372,7 @@ class Board:
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.player2_positions.append(target_pos)
+            self.push_player2_position(target_pos)
             self.push_move_stack((
                 self.player2_pos,
                 self.player2_prev_pos,
@@ -396,7 +402,7 @@ class Board:
                 self.spawn_candy(old_pos)
             else:
                 self.grid_mask[tail_pos] = False
-                self.player1_positions.pop()
+            self.pop_player1_position()
         else:
             self.grid_mask[old_pos] = True
             self.player2_pos, self.player2_prev_pos, tail_pos, ate_candy, self.hash = \
@@ -406,7 +412,7 @@ class Board:
                 self.spawn_candy(old_pos)
             else:
                 self.grid_mask[tail_pos] = False
-                self.player2_positions.pop()
+            self.pop_player2_position()
 
         self.last_player = -self.last_player
 
@@ -449,12 +455,16 @@ class Board:
         return self.last_player == other.last_player and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
+            self.player1_length == other.player2_length and \
+            self.player1_positions[-self.player1_length:] == other.player1_positions[-self.player1_length:] and \
             self.grid_mask == other.grid_mask
 
     def __hash__(self) -> int:
         if self.hash == 0:
             self.hash = hash((
                 tuple(self.grid_mask),
+                tuple(self.player1_positions[-self.player1_length:]),
+                tuple(self.player2_positions[-self.player2_length:]),
                 self.player1_pos,
                 self.player2_pos,
                 self.last_player

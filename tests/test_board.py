@@ -424,10 +424,12 @@ def test_undo_move_candy():
     b_start = b.copy()
 
     b.perform_move(move=BoardMove.UP, player=1)
+    assert not b.is_empty_pos(b.from_xy(1, 1))
     assert not b.candies
     b.undo_move(player=1)
     assert b.candies
     assert b.from_pos(candy_pos) in b.candies
+    assert not b.is_empty_pos(b.from_xy(1, 1))
     assert b == b_start
     assert hash(b) == hash(b_start)
     assert b.approx_hash() == b_start.approx_hash()

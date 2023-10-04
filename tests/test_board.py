@@ -51,6 +51,27 @@ def test_distance(width, height):
 
 @pytest.mark.parametrize('width', [4, 16])
 @pytest.mark.parametrize('height', [4, 16])
+def test_move_from_trans(width, height):
+    b = Board(width, height)
+    assert isinstance(b.MOVE_FROM_TRANS, list)
+
+    for x1, y1 in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+        for x2, y2 in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+            p_from, p_to = b.from_xy(x1, y1), b.from_xy(x2, y2)
+            if p_from == p_to or abs(x1 - x2) + abs(y1 - y2) > 1:
+                continue
+
+            if x1 == x2:
+                ref_move = BoardMove.UP if y2 > y1 else BoardMove.DOWN
+            else:
+                ref_move = BoardMove.RIGHT if x2 > x1 else BoardMove.LEFT
+
+            assert isinstance(b.MOVE_FROM_TRANS[p_from][p_to], BoardMove)
+            assert b.MOVE_FROM_TRANS[p_from][p_to] == ref_move
+
+
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
 def test_four_way_positions(width, height):
     b = Board(width, height)
 
@@ -136,6 +157,24 @@ def test_eight_way_trans_positions(width, height):
             ref_positions = set(all_positions)
             ref_positions.remove(p_old)
             assert set(positions) == set(ref_positions)
+
+
+@pytest.mark.parametrize('width', [4, 16])
+@pytest.mark.parametrize('height', [4, 16])
+def test_moves_from_pos_trans(width, height):
+    b = Board(width, height)
+    assert isinstance(b.MOVES_FROM_POS_TRANS, list)
+    for x1, y1 in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+        for x2, y2 in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+            p_from, p_to = b.from_xy(x1, y1), b.from_xy(x2, y2)
+            if p_from == p_to or abs(x1 - x2) + abs(y1 - y2) > 1:
+                continue
+
+            pos_options = b.FOUR_WAY_POSITIONS_FROM_POS_COND[p_from][p_to]
+            ref_moves = [b.MOVE_FROM_TRANS[p_to][p] for p in pos_options]
+
+            assert isinstance(b.MOVES_FROM_POS_TRANS[p_from][p_to], tuple)
+            assert set(b.MOVES_FROM_POS_TRANS[p_from][p_to]) == set(ref_moves)
 
 
 @pytest.mark.parametrize('width,height', [(3, 2), (2, 3), (16, 16)])

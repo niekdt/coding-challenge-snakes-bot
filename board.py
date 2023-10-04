@@ -98,7 +98,7 @@ class Board:
         'FOUR_WAY_POSITIONS_FROM_POS_COND', 'FOUR_WAY_POSITIONS_FROM_POS',
         'EIGHT_WAY_POSITIONS_COND', 'EIGHT_WAY_POSITIONS',
         'EIGHT_WAY_POSITIONS_FROM_POS_COND', 'EIGHT_WAY_POSITIONS_FROM_POS',
-        'MOVE_POS_OFFSET',
+        'MOVE_POS_OFFSET', 'MOVE_FROM_TRANS',
         'MOVES_FROM_POS', 'MOVES_FROM_POS_COND', 'MOVES_FROM_POS_TRANS',
         'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
         'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
@@ -160,6 +160,20 @@ class Board:
         self.DISTANCE = [
             [distance(self.from_index(p1), self.from_index(p2)) for p2 in range(len(self.grid_mask))]
             for p1 in range(len(self.grid_mask))
+        ]
+
+        def _move_from_trans(pos_from, pos_to):
+            if abs(pos_to - pos_from) == 1:
+                return BoardMove.UP if pos_to > pos_from else BoardMove.DOWN
+            else:
+                return BoardMove.RIGHT if pos_to > pos_from else BoardMove.LEFT
+
+        self.MOVE_FROM_TRANS: List[List[BoardMove]] = [
+            [
+                _move_from_trans(p_from, p_to)
+                for p_to in range(len(self.grid_mask))
+            ]
+            for p_from in range(len(self.grid_mask))
         ]
 
         def is_within_bounds(pos):
@@ -240,12 +254,13 @@ class Board:
                 x, y = self.from_index(pos)
                 return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
 
-        def _get_transitional_moves(pos, prev_pos):
-            return tuple(m for m in MOVES if is_within_bounds_and_not_from(pos + self.MOVE_POS_OFFSET[m], prev_pos))
-
+        # Get moves for a given (from, to) position pair, with the first returned move being the last performed move
         self.MOVES_FROM_POS_TRANS: List[List[Tuple[BoardMove, ...], ...]] = [
             [
-                _get_transitional_moves(pos_new, pos_old)
+                tuple(
+                    m for m in FIRST_MOVE_ORDER[self.MOVE_FROM_TRANS[pos_old][pos_new]]
+                    if is_within_bounds(pos_new + self.MOVE_POS_OFFSET[m])
+                )
                 for pos_new in range(len(self.grid_mask))
             ]
             for pos_old in range(len(self.grid_mask))

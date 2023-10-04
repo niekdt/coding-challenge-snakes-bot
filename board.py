@@ -81,15 +81,17 @@ class Board:
         'width', 'height',
         'full_width', 'full_height',
         'center',
-        'grid',
+        'grid', 'grid_mask',
         'candies', 'spawn_candy', 'remove_candy',
         'player1_pos', 'player2_pos',
+        'player1_positions', 'player2_positions',
         'player1_prev_pos', 'player2_prev_pos',
         'player1_head', 'player2_head',
         'player1_length', 'player2_length',
         'lb', 'ub',
         'hash',
         'last_player',
+        'remove_player1_tail', 'remove_player2_tail',
         'move_stack', 'push_move_stack', 'pop_move_stack',
         'pos_map',
         'DISTANCE',
@@ -109,10 +111,12 @@ class Board:
 
         self.width, self.height = width, height
         self.full_width, self.full_height = width + 2, height + 2
-        self.grid: Grid = create_grid(width, height)
+        self.grid, self.grid_mask = create_grid(width, height)
         self.candies: List[PosIdx] = []
         self.player1_pos: PosIdx = -10
         self.player2_pos: PosIdx = -10
+        self.player1_positions: List[PosIdx] = []
+        self.player2_positions: List[PosIdx] = []
         self.player1_prev_pos: PosIdx = -10
         self.player2_prev_pos: PosIdx = -10
         self.player1_head, self.player2_head = 0, 0
@@ -239,8 +243,10 @@ class Board:
         self.last_player = -1  # set P2 to have moved last
 
         # clear grid
-        self.grid = create_grid(self.width, self.height)
+        self.grid, self.grid_mask = create_grid(self.width, self.height)
         self.candies.clear()
+        self.player1_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake1.positions)]
+        self.player2_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake2.positions)]
 
         # clear move stacks
         self.move_stack.clear()
@@ -250,12 +256,15 @@ class Board:
         self.lb, self.ub = self.player2_head + self.player2_length, self.player1_head - self.player1_length
 
         # head = p1_head, tail = p1_head - len + 1
-        for i, pos in enumerate(snake1.positions):
-            self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player1_head - i
+        for i, pos in enumerate(self.player1_positions):
+            self.grid[pos], self.grid_mask[pos] = self.player1_head - self.player1_length + i + 1, False
+
+        # for i, pos in enumerate(snake1.positions):
+        #     self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player1_head - i
 
         # head = p2_head, tail = p2_head + len - 1
-        for i, pos in enumerate(snake2.positions):
-            self.grid[self.from_pos(pos) + self.DIR_UP_RIGHT] = self.player2_head + i
+        for i, pos in enumerate(self.player2_positions):
+            self.grid[pos], self.grid_mask[pos] = self.player2_head + self.player2_length - i - 1, False
 
         self.player1_pos, self.player2_pos = self.from_pos(snake1.positions[0]) + self.DIR_UP_RIGHT, \
             self.from_pos(snake2.positions[0]) + self.DIR_UP_RIGHT
@@ -273,24 +282,34 @@ class Board:
         return self.width, self.height
 
     def is_empty_pos(self, pos: PosIdx) -> bool:
-        return self.lb <= self.grid[pos] <= self.ub
+        return self.grid_mask[pos]
 
     def count_player_move_partitions(self, player: int) -> int:
         pos = self.player1_pos if player == 1 else self.player2_pos
 
         # Start from top-left, clockwise
         return count_move_partitions(
-            [self.lb <= self.grid[p] <= self.ub for p in self.EIGHT_WAY_POSITIONS[pos]]
+            [self.grid_mask[p] for p in self.EIGHT_WAY_POSITIONS[pos]]
         )
 
+    def get_tail_pos(self, player: int) -> PosIdx:
+        return self.player1_positions[-self.player1_length] \
+            if player == 1 else self.player2_positions[-self.player2_length]
+
     def get_empty_mask(self) -> GridMask:
-        return [self.lb <= v <= self.ub for v in self.grid]
+        return [*self.grid_mask]
 
     def get_player1_mask(self) -> GridMask:
-        return [v > self.ub for v in self.grid]
+        mask = [False] * len(self.grid_mask)
+        for pos in self.player1_positions[-self.player1_length:]:
+            mask[pos] = True
+        return mask
 
     def get_player2_mask(self) -> GridMask:
-        return [v < self.lb for v in self.grid]
+        mask = [False] * len(self.grid_mask)
+        for pos in self.player2_positions[-self.player2_length:]:
+            mask[pos] = True
+        return mask
 
     def can_move(self, player: int) -> bool:
         if player == 1:
@@ -299,10 +318,10 @@ class Board:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
 
         pos_options = self.FOUR_WAY_POSITIONS[pos]
-        return self.lb <= self.grid[pos_options[0]] <= self.ub or \
-            self.lb <= self.grid[pos_options[1]] <= self.ub or \
-            self.lb <= self.grid[pos_options[2]] <= self.ub or \
-            self.lb <= self.grid[pos_options[3]] <= self.ub
+        return self.grid_mask[pos_options[0]] or \
+            self.grid_mask[pos_options[1]] or \
+            self.grid_mask[pos_options[2]] or \
+            self.grid_mask[pos_options[3]]
         # def is_empty(p):
         #     return self.lb <= self.grid[p] <= self.ub
         #
@@ -313,7 +332,7 @@ class Board:
             pos, prev_pos = self.player1_pos, self.player1_prev_pos
         else:
             pos, prev_pos = self.player2_pos, self.player2_prev_pos
-        return sum([self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS_COND[pos]])
+        return sum([self.grid_mask[p] for p in self.FOUR_WAY_POSITIONS_COND[pos]])
 
     def iterate_valid_moves(self, player: int, order: Tuple[BoardMove] = MOVES) -> Iterator[BoardMove]:
         if player == 1:
@@ -322,7 +341,7 @@ class Board:
             pos = self.player2_pos
 
         def can_do(m):
-            return self.lb <= self.grid[pos + self.MOVE_POS_OFFSET[m]] <= self.ub
+            return self.grid_mask[pos + self.MOVE_POS_OFFSET[m]]
 
         return filter(can_do, order)
 
@@ -334,7 +353,7 @@ class Board:
         pos = self.player1_pos if player == 1 else self.player2_pos
         moves = list(compress(
             MOVES,
-            (self.lb <= self.grid[p] <= self.ub for p in self.FOUR_WAY_POSITIONS[pos])
+            (self.grid_mask[p] for p in self.FOUR_WAY_POSITIONS[pos])
         ))  # faster than tuple() AND list comprehension
         return [x for _, x in sorted(zip(order, moves))]
 
@@ -342,31 +361,52 @@ class Board:
     def perform_move(self, move: BoardMove, player: int) -> None:
         assert self.last_player != player
         direction = self.MOVE_POS_OFFSET[move]
-
         if player == 1:
             target_pos = self.player1_pos + direction
+            tail_pos = self.player1_positions[-self.player1_length]
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.push_move_stack((self.grid[target_pos], self.player1_pos, self.player1_prev_pos, ate_candy, self.hash))
+            self.player1_positions.append(target_pos)
+            self.push_move_stack((
+                self.grid[target_pos],
+                self.player1_pos,
+                self.player1_prev_pos,
+                tail_pos,
+                ate_candy,
+                self.hash
+            ))
             self.player1_head += 1
-            self.player1_prev_pos, self.player1_pos, self.grid[self.player1_pos], self.ub = \
-                self.player1_pos, target_pos, self.player1_head, self.player1_head - self.player1_length
+            self.player1_prev_pos, self.player1_pos, self.grid[self.player1_pos], self.grid_mask[self.player1_pos], self.ub = \
+                self.player1_pos, target_pos, self.player1_head, False, self.player1_head - self.player1_length
             if ate_candy:
                 self.player1_length += 1
                 self.remove_candy(self.player1_pos)
+            else:
+                self.grid_mask[tail_pos] = True
         else:
             target_pos = self.player2_pos + direction
+            tail_pos = self.player2_positions[-self.player2_length]
 
             # update game state
             ate_candy = target_pos in self.candies
-            self.push_move_stack((self.grid[target_pos], self.player2_pos, self.player2_prev_pos, ate_candy, self.hash))
+            self.player2_positions.append(target_pos)
+            self.push_move_stack((
+                self.grid[target_pos],
+                self.player2_pos,
+                self.player2_prev_pos,
+                tail_pos,
+                ate_candy,
+                self.hash
+            ))
             self.player2_head -= 1  # the only difference in logic between the players
-            self.player2_prev_pos, self.player2_pos, self.grid[self.player2_pos], self.lb = \
-                self.player2_pos, target_pos, self.player2_head, self.player2_head + self.player2_length
+            self.player2_prev_pos, self.player2_pos, self.grid[self.player2_pos], self.grid_mask[self.player2_pos], self.lb = \
+                self.player2_pos, target_pos, self.player2_head, False, self.player2_head + self.player2_length
             if ate_candy:
                 self.player2_length += 1
                 self.remove_candy(self.player2_pos)
+            else:
+                self.grid_mask[tail_pos] = True
 
         self.last_player, self.hash = player, 0
 
@@ -375,19 +415,27 @@ class Board:
         old_pos = self.player1_pos if player == 1 else self.player2_pos
 
         if player == 1:
-            self.grid[self.player1_pos], self.player1_pos, self.player1_prev_pos, ate_candy, self.hash = \
+            self.grid_mask[old_pos] = True
+            self.grid[self.player1_pos], self.player1_pos, self.player1_prev_pos, tail_pos, ate_candy, self.hash = \
                 self.pop_move_stack()
             if ate_candy:
                 self.player1_length -= 1
                 self.spawn_candy(old_pos)
+            else:
+                self.grid_mask[tail_pos] = False
+                self.player1_positions.pop()
             self.player1_head -= 1
             self.ub = self.player1_head - self.player1_length
         else:
-            self.grid[self.player2_pos], self.player2_pos, self.player2_prev_pos, ate_candy, self.hash = \
+            self.grid_mask[old_pos] = True
+            self.grid[self.player2_pos], self.player2_pos, self.player2_prev_pos, tail_pos, ate_candy, self.hash = \
                 self.pop_move_stack()
             if ate_candy:
                 self.player2_length -= 1
                 self.spawn_candy(old_pos)
+            else:
+                self.grid_mask[tail_pos] = False
+                self.player2_positions.pop()
             self.player2_head += 1
             self.lb = self.player2_head + self.player2_length
 
@@ -519,9 +567,9 @@ def count_move_partitions(cells: List[bool]) -> int:
         return 1
 
 
-def create_grid(width, height) -> Grid:
+def create_grid(width, height) -> Tuple[Grid, GridMask]:
     wall = 10000
     first_row = [wall] * (height + 2)
-    mat = [first_row] + [[wall] + [0] * height + [wall] for i in range(width)] + [first_row]
-
-    return list(chain.from_iterable(mat))
+    mat = [first_row] + [[wall] + [0] * height + [wall] for _ in range(width)] + [first_row]
+    grid = list(chain.from_iterable(mat))
+    return grid, [v == 0 for v in grid]

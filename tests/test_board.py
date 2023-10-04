@@ -14,14 +14,14 @@ from ....snake import Snake
 def test_init(width, height):
     b = Board(width, height)
     assert b.shape == (width, height)
-    assert len(b.grid) == (width + 2) * (height + 2)
+    assert len(b.grid_mask) == (width + 2) * (height + 2)
 
     for x in range(0, b.full_width):
-        assert b.grid[b.from_xy(x, 0)] != 0
+        assert b.grid_mask[b.from_xy(x, 0)] is False
     for y in range(0, b.full_height):
-        assert b.grid[b.from_xy(0, y)] != 0
+        assert b.grid_mask[b.from_xy(0, y)] is False
     for x, y in itertools.product(range(b.width), range(b.height)):
-        assert b.grid[b.from_xy(1 + x, 1 + y)] == 0
+        assert b.grid_mask[b.from_xy(1 + x, 1 + y)] is True
 
     assert np.all(b.grid_as_np(b.get_empty_mask())[1:-1, 1:-1])
     assert not np.any(b.grid_as_np(b.get_player1_mask())[1:-1, 1:-1])
@@ -61,7 +61,7 @@ def test_four_way_positions(width, height):
     assert isinstance(b.FOUR_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
-        if pos < 0 or pos >= len(b.grid):
+        if pos < 0 or pos >= len(b.grid_mask):
             return False
         else:
             xx, yy = b.from_index(pos)
@@ -106,7 +106,7 @@ def test_eight_way_positions(width, height):
     assert isinstance(b.EIGHT_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
-        if pos < 0 or pos >= len(b.grid):
+        if pos < 0 or pos >= len(b.grid_mask):
             return False
         else:
             xx, yy = b.from_index(pos)
@@ -145,16 +145,16 @@ def test_eight_way_trans_positions(width, height):
 def test_fully_is_empty_pos(width, height):
     b = Board(width, height)
     for x in range(0, b.full_width):
-        assert b.grid[b.from_xy(x, 0)] != 0
+        assert b.grid_mask[b.from_xy(x, 0)] is False
         assert not b.is_empty_pos(b.from_xy(x, 0))
         assert not b.is_empty_pos(b.from_xy(x, b.height + 1))
     for y in range(0, b.full_height):
-        assert b.grid[b.from_xy(0, y)] != 0
+        assert b.grid_mask[b.from_xy(0, y)] is False
         assert not b.is_empty_pos(b.from_xy(0, y))
         assert not b.is_empty_pos(b.from_xy(b.width + 1, y))
 
     for x, y in itertools.product(range(b.width), range(b.height)):
-        assert b.grid[b.from_xy(1 + x, 1 + y)] == 0
+        assert b.grid_mask[b.from_xy(1 + x, 1 + y)] is True
         assert b.is_empty_pos(b.from_xy(1 + x, 1 + y))
 
 
@@ -208,8 +208,6 @@ def test_set_state():
         snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
         candies=[]
     )
-    assert b.player1_head == 2
-    assert b.player2_head == -2
     assert b.player1_length == 2
     assert b.player2_length == 2
     assert b.player1_pos == b.from_xy(2, 1)
@@ -220,8 +218,8 @@ def test_set_state():
     assert b.get_tail_pos(player=-1) == b.player2_prev_pos
     assert b.last_player == -1
     assert_array_equal(
-        b.grid_as_np(b.grid)[1:-1, 1:-1],
-        np.array([[1, 0], [2, -2], [0, -1]])
+        b.grid_as_np(b.grid_mask)[1:-1, 1:-1],
+        np.array([[False, True], [False, False], [True, False]])
     )
     assert not b.candies
 
@@ -232,8 +230,6 @@ def test_set_state():
         snake2=Snake(id=1, positions=np.array([[2, 1], [1, 1]])),
         candies=[]
     )
-    assert b.player1_head == 2
-    assert b.player2_head == -2
     assert b.player1_length == 2
     assert b.player2_length == 2
     assert b.player1_pos == b.from_xy(1, 1)
@@ -244,8 +240,8 @@ def test_set_state():
     assert b.get_tail_pos(player=-1) == b.player2_prev_pos
     assert b.last_player == -1
     assert_array_equal(
-        b.grid_as_np(b.grid)[1:-1, 1:-1],
-        np.array([[2, 0], [1, -1], [0, -2]])
+        b.grid_as_np(b.grid_mask)[1:-1, 1:-1],
+        np.array([[False, True], [False, False], [True, False]])
     )
     assert not b.candies
     assert hash(b) != hash(b0)

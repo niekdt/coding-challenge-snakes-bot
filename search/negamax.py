@@ -1,7 +1,7 @@
 from math import inf
 from typing import Dict
 
-from ..board import Board, MOVES, BoardMove
+from ..board import Board, MOVES, BoardMove, BOARD_MOVE_UP
 
 
 def negamax_moves(
@@ -64,12 +64,20 @@ def negamax_ab_moves(
 
     alpha = -inf
     beta = inf
-    best_move = BoardMove.UP
+    best_move = BOARD_MOVE_UP
 
     best_value = -inf
     for move in moves:
         if __debug__:
             print(f'== Evaluate {move} for alpha = {alpha} ==')
+
+        if best_value == -inf and move == moves[-1]:
+            if __debug__:
+                print('Skipping last root move evaluation because all other moves sucked')
+            best_move = move
+            best_value = 0
+            break
+
         board.perform_move(move, player=1)
         value = -negamax_ab(
             board,

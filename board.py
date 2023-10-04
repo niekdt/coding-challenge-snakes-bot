@@ -2,7 +2,7 @@ from collections import deque
 from copy import deepcopy
 from enum import IntEnum, auto, Enum
 from itertools import compress, chain
-from typing import List, Deque, TypeVar, Tuple, Iterator
+from typing import List, TypeVar, Tuple, Iterator
 
 import numpy as np
 from numpy import ndarray
@@ -124,7 +124,7 @@ class Board:
         self.lb, self.ub = 0, 0
         self.hash: int = 0
         self.last_player = 1
-        self.move_stack: Deque[int, PosIdx, bool, int] = deque(maxlen=128)  # (head, pos, candy, hash)
+        self.move_stack: List[int, PosIdx, bool, int] = []  # (head, pos, candy, hash)
         self.push_move_stack, self.pop_move_stack = self.move_stack.append, self.move_stack.pop
         self.spawn_candy, self.remove_candy = self.candies.append, self.candies.remove
         self.pos_map = tuple([divmod(i, self.full_height) for i in range(0, self.full_width * self.full_height)])

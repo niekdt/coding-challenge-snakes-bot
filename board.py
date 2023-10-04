@@ -455,7 +455,8 @@ class Board:
         return self.last_player == other.last_player and \
             self.player1_pos == other.player1_pos and \
             self.player2_pos == other.player2_pos and \
-            self.player1_length == other.player2_length and \
+            self.player1_length == other.player1_length and \
+            self.player2_length == other.player2_length and \
             self.player1_positions[-self.player1_length:] == other.player1_positions[-self.player1_length:] and \
             self.grid_mask == other.grid_mask
 

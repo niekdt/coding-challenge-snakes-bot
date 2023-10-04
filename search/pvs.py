@@ -1,23 +1,24 @@
 from math import inf
-from typing import Dict, Tuple
+from typing import Dict
 
 from snakes.bots.niekdt.board import Board, MOVES, FIRST_MOVE_ORDER, BoardMove, BOARD_MOVE_UP, BOARD_MOVE_LEFT, \
     BOARD_MOVE_RIGHT, BOARD_MOVE_DOWN
 
-MAX_DEPTH = 32
+MAX_DEPTH = 64
 
 
 def pvs_moves(
         board: Board,
         depth: int,
         eval_fun: callable,
-        move_history: Dict,
-        root_moves: Tuple[BoardMove] = MOVES
+        move_history: Dict
 ) -> Dict[BoardMove, float]:
     # suicide
     if board.player1_length > 2 * board.player2_length:
         raise Exception('ayy lmao')
 
+    root_moves = MOVES
+    # root_moves: Tuple[BoardMove] = board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos]
     board_hash = hash(board)
     move_order = move_history.get(board_hash, root_moves)
     moves = board.get_valid_moves_ordered(player=1, order=move_order)
@@ -194,7 +195,7 @@ def qsearch(
     if not board.can_move(player):
         return -2 << 30  # do not use inf as it can lead to pruning issues (not sure why)
     # print(f'Q-search for D{depth_left} into depth {depth}')
-
+    assert depth < MAX_DEPTH
     if depth_left == 0 or is_quiet_node(board) or depth >= MAX_DEPTH:
         return eval_fun(board, player=player)
 
@@ -224,7 +225,7 @@ def qsearch(
 
 
 def is_quiet_node(board: Board) -> bool:
-    return board.DISTANCE[board.player1_pos][board.player2_pos] > 2 and \
+    return board.DISTANCE[board.player1_pos][board.player2_pos] > 3 and \
         board.count_moves(player=1) > 1 and \
         board.count_moves(player=-1) > 1 and \
         board.count_player_move_partitions(player=1) <= 1 and \

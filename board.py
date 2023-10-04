@@ -99,6 +99,7 @@ class Board:
         'EIGHT_WAY_POSITIONS_COND', 'EIGHT_WAY_POSITIONS',
         'EIGHT_WAY_POSITIONS_FROM_POS_COND', 'EIGHT_WAY_POSITIONS_FROM_POS',
         'MOVE_POS_OFFSET',
+        'MOVES_FROM_POS', 'MOVES_FROM_POS_COND', 'MOVES_FROM_POS_TRANS',
         'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
         'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
     )
@@ -178,6 +179,11 @@ class Board:
             for p in range(len(self.grid_mask))
         ]
 
+        self.MOVES_FROM_POS_COND: List[List[PosIdx, ...]] = [
+            [m for m in MOVES if is_within_bounds(p + self.MOVE_POS_OFFSET[m])]
+            for p in range(len(self.grid_mask))
+        ]
+
         def _get_transitional_positions(pos_old: PosIdx, pos_new: PosIdx, pos_options: List) -> Tuple[PosIdx, ...]:
             candidate_positions = pos_options[pos_new]
             if pos_old in candidate_positions:
@@ -222,6 +228,24 @@ class Board:
         self.EIGHT_WAY_POSITIONS_FROM_POS: List[List] = [
             [
                 _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS)
+                for pos_new in range(len(self.grid_mask))
+            ]
+            for pos_old in range(len(self.grid_mask))
+        ]
+
+        def is_within_bounds_and_not_from(pos, prev_pos):
+            if pos == prev_pos or pos < 0 or pos >= len(self.grid_mask):
+                return False
+            else:
+                x, y = self.from_index(pos)
+                return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
+
+        def _get_transitional_moves(pos, prev_pos):
+            return tuple(m for m in MOVES if is_within_bounds_and_not_from(pos + self.MOVE_POS_OFFSET[m], prev_pos))
+
+        self.MOVES_FROM_POS_TRANS: List[List[Tuple[BoardMove, ...], ...]] = [
+            [
+                _get_transitional_moves(pos_new, pos_old)
                 for pos_new in range(len(self.grid_mask))
             ]
             for pos_old in range(len(self.grid_mask))

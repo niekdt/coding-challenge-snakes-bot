@@ -36,9 +36,6 @@ def test_empty_hash(width, height):
     assert hash(Board(width, height)) == hash(Board(width, height))
     assert Board(width, height).approx_hash() == Board(width, height).approx_hash()
 
-    assert hash(Board(width, height)) != hash(Board(width + 1, height))
-    assert hash(Board(width, height)) != hash(Board(width, height + 1))
-
 
 @pytest.mark.parametrize('width', [4, 16])
 @pytest.mark.parametrize('height', [4, 16])

@@ -13,7 +13,7 @@ from snakes.snake import Snake
 @pytest.fixture(autouse=True)
 def cleanup():
     # warm-up
-    test_play_deep_game(grid=16, seed=1, bot='Snek', max_turns=100)
+    test_play_deep_game(grid=16, seed=1, bot='Snek', max_turns=400)
     best.evaluate.cache_clear()
     gc.collect()
     gc.disable()
@@ -22,7 +22,7 @@ def cleanup():
 @pytest.mark.parametrize('grid', [16])
 @pytest.mark.parametrize('seed', [1] * 6)
 @pytest.mark.parametrize('bot', ['Snek'])
-@pytest.mark.parametrize('max_turns', [100])  # time to beat: ???s for BFS, 7.7s for DFS
+@pytest.mark.parametrize('max_turns', [400])  # time to beat: 5.15s for BFS, 7.7s for DFS
 def test_play_deep_game(grid, seed, bot, max_turns):
     random.seed(seed)
     grid_size = (grid, grid)

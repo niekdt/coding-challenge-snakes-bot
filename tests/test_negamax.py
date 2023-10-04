@@ -215,6 +215,22 @@ def test_losing_position_gap(search, depth):
     assert moves[BoardMove.RIGHT] < moves[BoardMove.LEFT]
 
 
+@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 12), (pvs_moves, 12)])
+def test_winning_gap(search, depth):
+    board = Board(16, 16)
+    board.set_state(
+        snake1=Snake(id=1, positions=np.array([[8, 6], [9, 6], [10, 6], [10, 7], [10, 8], [10, 9], [11, 9], [12, 9], [13, 9], [13, 10], [12, 10], [11, 10], [11, 11], [11, 12], [10, 12], [9, 12], [8, 12], [8, 11], [7, 11], [6, 11], [5, 11], [5, 10], [5, 9], [5, 8], [5, 7], [4, 7], [4, 6], [5, 6]])),
+        snake2=Snake(id=0, positions=np.array([[8, 0], [7, 0], [7, 1], [8, 1], [8, 2], [8, 3], [7, 3], [7, 4], [7, 5], [6, 5], [6, 4], [6, 3], [5, 3], [5, 2], [5, 1], [4, 1], [3, 1], [3, 0], [2, 0], [1, 0], [0, 0], [0, 1], [0, 2], [1, 2], [1, 1], [2, 1], [2, 2], [3, 2]])),
+        candies=[]
+    )
+    print(board)
+
+    moves = search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())
+    assert set(moves) == {BoardMove.DOWN, BoardMove.LEFT, BoardMove.UP}
+    assert moves[BoardMove.DOWN] > moves[BoardMove.LEFT]
+    assert moves[BoardMove.DOWN] > moves[BoardMove.UP]
+
+
 @pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 13)])
 @pytest.mark.timeout(5)
 def test_computation_time(search, depth):

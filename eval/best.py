@@ -7,8 +7,10 @@ from ..board import Board
 def evaluate(board: Board, player: int) -> float:
     # length
     score = 1000 * (board.player1_length - board.player2_length)
-    p1_pos, p2_pos = board.player1_pos, board.player2_pos
-    p1_dist, p2_dist = board.DISTANCE[p1_pos], board.DISTANCE[p2_pos]
+    p1_pos = board.player1_pos
+    p2_pos = board.player2_pos
+    p1_dist = board.DISTANCE[p1_pos]
+    p2_dist = board.DISTANCE[p2_pos]
 
     # candy dist
     score += 10 * sum([p2_dist[candy_pos] - p1_dist[candy_pos] for candy_pos in board.candies])

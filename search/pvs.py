@@ -21,8 +21,10 @@ def pvs_moves(
     move_order = move_history.get(board_hash, board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos])
     moves = list(board.iterate_valid_moves(player=1, order=move_order))
 
-    alpha, beta = -inf, inf
-    best_move, best_value = BOARD_MOVE_UP, -inf
+    alpha = -inf
+    beta = inf
+    best_move = BOARD_MOVE_UP
+    best_value = -inf
     score_history = dict()
 
     for move in moves:
@@ -53,7 +55,8 @@ def pvs_moves(
             print(f'\tGot score {value}')
         board.undo_move(player=1)
         if value > best_value:
-            best_move, best_value = move, value
+            best_move = move
+            best_value = value
         alpha = max(alpha, value)
 
     return {best_move: best_value}

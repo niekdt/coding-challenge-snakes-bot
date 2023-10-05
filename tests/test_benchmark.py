@@ -21,7 +21,7 @@ def cleanup():
 
 @pytest.mark.parametrize('grid', [16])
 @pytest.mark.parametrize('seed', [1] * 6)
-@pytest.mark.parametrize('max_turns', [500])  # time to beat: 12.0s
+@pytest.mark.parametrize('max_turns', [500])  # time to beat: 12.9s
 def test_play_deep_game(grid, seed, max_turns):
     random.seed(seed)
     grid_size = (grid, grid)
@@ -32,6 +32,7 @@ def test_play_deep_game(grid, seed, max_turns):
     while not game.finished() and game.turns < max_turns:
         game.update()
 
+    assert game.finished()
     assert game.scores[0] > game.scores[1]
     assert game.scores[0] == 64
     assert game.scores[1] == 20

@@ -35,7 +35,7 @@ class NegamaxBot(Bot):
 
     def determine_next_move(self, snake: Snake, other_snakes: List[Snake], candies: List[np.array]) -> Move:
         start = time.time()
-        self.board.set_state(snake1=snake, snake2=other_snakes[0], candies=candies)
+        self.board.set_state_from_game(snake1=snake, snake2=other_snakes[0], candies=candies)
         print('=' * 80)
         print('Initial game state:', end='')
         print(self.board)

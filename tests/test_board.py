@@ -1,10 +1,13 @@
 import itertools
+from os import path
 from typing import Tuple
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
+from snakes.bots.niekdt.eval import annotation
+from snakes.bots.niekdt.eval.annotation import AnnotatedBoard
 from snakes.constants import Move
 from ..board import Board, as_move, count_move_partitions, BoardMove, from_repr
 from ....snake import Snake
@@ -239,7 +242,7 @@ def test_is_candy_pos(width, height):
 
 def test_set_state():
     b = Board(3, 2)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
         candies=[]
@@ -261,7 +264,7 @@ def test_set_state():
 
     # reuse board
     b0 = b.copy()
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[0, 0], [1, 0]])),
         snake2=Snake(id=1, positions=np.array([[2, 1], [1, 1]])),
         candies=[]
@@ -286,7 +289,7 @@ def test_set_state():
 @pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
 def test_get_is_empty_pos(width, height):
     b = Board(width, height)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),
         candies=[]
@@ -302,7 +305,7 @@ def test_get_is_empty_pos(width, height):
 @pytest.mark.parametrize('width,height', [(3, 2), (16, 16)])
 def test_get_empty_mask(width, height):
     b = Board(width, height)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[0, 1], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[2, 0], [2, 1]])),
         candies=[]
@@ -317,7 +320,7 @@ def test_get_empty_mask(width, height):
 
 def test_perform_move():
     b = Board(3, 3)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
         candies=[]
@@ -365,7 +368,7 @@ def test_perform_move():
 
 def test_perform_move_candy():
     b = Board(3, 3)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
         candies=[]
@@ -387,7 +390,7 @@ def test_perform_move_candy():
 
 def test_undo_move():
     b = Board(3, 3)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
         candies=[]
@@ -450,7 +453,7 @@ def test_undo_move():
 
 def test_undo_move_candy():
     b = Board(3, 3)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
         candies=[]
@@ -475,7 +478,7 @@ def test_print():
     b = Board(3, 2)
     assert str(b) == '\n+---+\n|···|\n|···|\n+---+'
 
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
         candies=[]
@@ -499,18 +502,18 @@ def test_repr():
     b16_0 = from_repr(repr(b16))
     assert b16_0 == b16
 
-    b16.set_state(
+    b16.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
-        snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [1, 1]])),
         candies=[np.array([0, 10]), np.array([0, 9]), np.array([1, 8])]
     )
-    assert repr(b16) == f'16x16c[29,28,45]a[37,19]b[38,56]'
+    assert repr(b16) == f'16x16c[29,28,45]a[37,19]b[39,38]'
     b16_m = from_repr(repr(b16))
     assert b16_m == b16
 
     b16_m.perform_move(BoardMove.RIGHT, player=1)
     b16_m.perform_move(BoardMove.UP, player=-1)
-    assert repr(b16_m) == f'16x16c[29,28,45]a[55,37]b[39,38]'
+    assert repr(b16_m) == f'16x16c[29,28,45]a[55,37]b[40,39]'
 
     b16_m2 = from_repr(repr(b16_m))
     assert b16_m2 == b16_m
@@ -518,7 +521,7 @@ def test_repr():
 
 def test_move_generation():
     b = Board(4, 3)
-    b.set_state(
+    b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[3, 2], [3, 1]])),
         candies=[]
@@ -544,18 +547,18 @@ def test_set_state_candy():
     b = Board(3, 2)
     snake1 = Snake(id=0, positions=np.array([[1, 0], [0, 0]]))
     snake2 = Snake(id=1, positions=np.array([[1, 1], [2, 1]]))
-    b.set_state(snake1=snake1, snake2=snake2, candies=[(1, 1)])
+    b.set_state_from_game(snake1=snake1, snake2=snake2, candies=[(1, 1)])
     b1 = b.copy()
     assert b.candies
     assert b.from_xy(2, 2) in b.candies
 
     # no candies (reuse board)
-    b.set_state(snake1=snake1, snake2=snake2, candies=[])
+    b.set_state_from_game(snake1=snake1, snake2=snake2, candies=[])
     assert not b.candies
     assert not b.from_xy(2, 2) in b.candies
 
     # two candies
-    b.set_state(snake1=snake1, snake2=snake2, candies=[(1, 1), (0, 1)])
+    b.set_state_from_game(snake1=snake1, snake2=snake2, candies=[(1, 1), (0, 1)])
     assert b.candies
     assert b.from_xy(2, 2) in b.candies
     assert b.from_xy(1, 2) in b.candies

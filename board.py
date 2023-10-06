@@ -247,13 +247,6 @@ class Board:
             for pos_old in range(len(self.grid_mask))
         ]
 
-        def is_within_bounds_and_not_from(pos, prev_pos):
-            if pos == prev_pos or pos < 0 or pos >= len(self.grid_mask):
-                return False
-            else:
-                x, y = self.from_index(pos)
-                return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
-
         # Get moves for a given (from, to) position pair, with the first returned move being the last performed move
         self.MOVES_FROM_POS_TRANS: List[List[Tuple[BoardMove, ...], ...]] = [
             [
@@ -275,19 +268,19 @@ class Board:
     def from_index(self, index: PosIdx) -> Pos:
         return self.pos_map[index]
 
-    def set_state(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
-        # clear grid
+    def set_state(self, player1_positions: List[PosIdx], player2_positions: List[PosIdx], candy_positions: List[PosIdx]) -> None:
+        self.player1_positions = player1_positions
+        self.player2_positions = player2_positions
+        self.candies = candy_positions
+
+        # clear grid and move stack
         self.grid_mask = create_grid(self.width, self.height)
         self.move_stack = []
         self.push_move_stack = self.move_stack.append
         self.pop_move_stack = self.move_stack.pop
-        self.candies = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in candies]
         self.spawn_candy = self.candies.append
         self.remove_candy = self.candies.remove
 
-        # player positions
-        self.player1_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake1.positions)]
-        self.player2_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake2.positions)]
         self.push_player1_position = self.player1_positions.append
         self.push_player2_position = self.player2_positions.append
         self.pop_player1_position = self.player1_positions.pop
@@ -296,7 +289,8 @@ class Board:
         for pos in chain(self.player1_positions, self.player2_positions):
             self.grid_mask[pos] = False
 
-        self.player1_length, self.player2_length = len(snake1.positions), len(snake2.positions)
+        self.player1_length = len(player1_positions)
+        self.player2_length = len(player2_positions)
         self.player1_pos = self.player1_positions[-1]
         self.player1_prev_pos = self.player1_positions[-2]
         self.player2_pos = self.player2_positions[-1]
@@ -304,6 +298,13 @@ class Board:
 
         self.last_player = -1
         self.hash = 0
+
+    def set_state_from_game(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
+        player1_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake1.positions)]
+        player2_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake2.positions)]
+        candy_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in candies]
+
+        self.set_state(player1_positions, player2_positions, candy_positions)
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -323,6 +324,12 @@ class Board:
     def get_tail_pos(self, player: int) -> PosIdx:
         return self.player1_positions[-self.player1_length] \
             if player == 1 else self.player2_positions[-self.player2_length]
+
+    def get_player_positions(self, player: int) -> List[PosIdx]:
+        if player == 1:
+            return self.player1_positions[-self.player1_length:]
+        else:
+            return self.player2_positions[-self.player2_length:]
 
     def get_empty_mask(self) -> GridMask:
         return [*self.grid_mask]
@@ -533,7 +540,16 @@ class Board:
         return a
 
     def copy(self) -> Self:
-        return deepcopy(self)
+        other = deepcopy(self)
+        other.push_move_stack = other.move_stack.append
+        other.pop_move_stack = other.move_stack.pop
+        other.spawn_candy = other.candies.append
+        other.remove_candy = other.candies.remove
+        other.push_player1_position = other.player1_positions.append
+        other.push_player2_position = other.player2_positions.append
+        other.pop_player1_position = other.player1_positions.pop
+        other.pop_player2_position = other.player2_positions.pop
+        return other
 
     def __eq__(self, other) -> bool:
         return self.last_player == other.last_player and \
@@ -584,9 +600,9 @@ class Board:
         return f'{self.width:d}x{self.height:d}c[' +\
             ','.join(f'{c:d}' for c in self.candies) + \
             ']a[' +\
-            ','.join(f'{p:d}' for p in reversed(self.player1_positions[-self.player1_length:])) + \
+            ','.join(f'{p:d}' for p in reversed(self.get_player_positions(player=1))) + \
             ']b[' +\
-            ','.join(f'{p:d}' for p in reversed(self.player2_positions[-self.player2_length:])) + \
+            ','.join(f'{p:d}' for p in reversed(self.get_player_positions(player=-1))) + \
             ']'
 
 
@@ -608,22 +624,7 @@ def from_repr(x: str) -> Board:
     else:
         return board
 
-    candy_array = [np.array(board.from_index(p - board.DIR_UP_RIGHT)) for p in candy_idc]
-    p1_pos_list = [
-        list(board.from_index(p - board.DIR_UP_RIGHT))
-        for p in p1_idc
-    ]
-    p2_pos_list = [
-        list(board.from_index(p - board.DIR_UP_RIGHT))
-        for p in p2_idc
-    ]
-
-    board.set_state(
-        snake1=Snake(id=1, positions=np.array(p1_pos_list)),
-        snake2=Snake(id=0, positions=np.array(p2_pos_list)),
-        candies=candy_array
-    )
-
+    board.set_state(list(reversed(p1_idc)), list(reversed(p2_idc)), candy_idc)
     return board
 
 

@@ -6,7 +6,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from snakes.constants import Move
-from ..board import Board, as_move, count_move_partitions, BoardMove
+from ..board import Board, as_move, count_move_partitions, BoardMove, from_repr
 from ....snake import Snake
 
 
@@ -489,6 +489,33 @@ def test_print():
     assert str(b) == '\n+---+\n|Bb·|\n|·aA|\n+---+'
 
 
+def test_repr():
+    b = Board(4, 2)
+    assert repr(b) == f'4x2c[]a[]b[]'
+
+    b16 = Board(16, 16)
+    assert repr(b16) == f'16x16c[]a[]b[]'
+
+    b16_0 = from_repr(repr(b16))
+    assert b16_0 == b16
+
+    b16.set_state(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
+        candies=[np.array([0, 10]), np.array([0, 9]), np.array([1, 8])]
+    )
+    assert repr(b16) == f'16x16c[29,28,45]a[37,19]b[38,56]'
+    b16_m = from_repr(repr(b16))
+    assert b16_m == b16
+
+    b16_m.perform_move(BoardMove.RIGHT, player=1)
+    b16_m.perform_move(BoardMove.UP, player=-1)
+    assert repr(b16_m) == f'16x16c[29,28,45]a[55,37]b[39,38]'
+
+    b16_m2 = from_repr(repr(b16_m))
+    assert b16_m2 == b16_m
+
+
 def test_move_generation():
     b = Board(4, 3)
     b.set_state(
@@ -615,6 +642,66 @@ def test_count_free_space_bfs_dist(size, max_dist, lb):
     # test with lb
     space2 = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_pos(center), max_dist=max_dist, lb=lb)
     assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))
+
+
+@pytest.mark.parametrize('size', [2, 3, 4, 5])
+def test_count_free_space_bfs_delta_empty(size):
+    b = Board(size, size)
+
+    def area2(s): return (s ** 2 - s) // 2
+    def area1(s): return area2(s + 1)
+
+    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+        mask=b.get_empty_mask(),
+        pos1=b.from_xy(1, 1),
+        pos2=b.from_xy(size, size),
+        max_dist=1000,
+        delta_lb=1000
+    )
+
+    assert free_space1 == area1(size)
+    assert free_space2 == area2(size)
+    assert delta_space == area1(size) - area2(size)
+
+
+@pytest.mark.parametrize('size', [3, 4, 5])
+def test_count_free_space_bfs_delta_isolated(size):
+    b = Board(size, size)
+    for y in range(b.full_height):
+        b.grid_mask[b.from_xy(2, y)] = False
+
+    def area2(s): return size * (size - 2)
+    def area1(s): return size
+
+    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+        mask=b.get_empty_mask(),
+        pos1=b.from_xy(1, 1),
+        pos2=b.from_xy(size, size),
+        max_dist=1000,
+        delta_lb=1000
+    )
+
+    assert free_space1 == area1(size)
+    assert free_space2 == area2(size)
+    assert delta_space == area1(size) - area2(size)
+
+
+@pytest.mark.parametrize('size,fs1', [(3, 4), (4, 8), (5, 13)])
+def test_count_free_space_bfs_delta_walled(size, fs1):
+    b = Board(size, size)
+    b.grid_mask[b.from_xy(2, 1)] = False
+
+    fs2 = size ** 2 - fs1 - 1
+
+    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+        mask=b.get_empty_mask(),
+        pos1=b.from_xy(1, 1),
+        pos2=b.from_xy(size, size),
+        max_dist=1000,
+        delta_lb=1000
+    )
+
+    assert delta_space == fs1 - fs2
 
 
 def shift(x: Tuple, n: int) -> Tuple:

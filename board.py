@@ -486,6 +486,32 @@ class Board:
 
         return free_space
 
+    def count_free_space_bfs_delta(self, mask: GridMask, pos1: PosIdx, pos2: PosIdx, max_dist: int, delta_lb: int) -> \
+            Tuple[int, int, int]:
+        mask[pos1] = False
+        mask[pos2] = False
+        pos = pos1
+        player = 0
+        free_space = [1, 1]
+        delta_space = 0
+        cur_dist = 0
+        pos_options = self.FOUR_WAY_POSITIONS_COND
+        queue = deque(maxlen=256)
+        queue.append((1, pos2, 0))
+
+        while abs(delta_space) < delta_lb and cur_dist < max_dist:
+            for new_pos in pos_options[pos]:
+                if mask[new_pos]:
+                    mask[new_pos] = False
+                    free_space[player] += 1
+                    queue.append((player, new_pos, cur_dist + 1))
+            if not queue:
+                break
+            player, pos, cur_dist = queue.popleft()
+            delta_space = free_space[0] - free_space[1]
+
+        return delta_space, free_space[0], free_space[1]
+
     def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
         stack = [pos]
         free_space = 0
@@ -555,7 +581,50 @@ class Board:
             replace('_', '·')
 
     def __repr__(self) -> str:
-        return str(self)
+        return f'{self.width:d}x{self.height:d}c[' +\
+            ','.join(f'{c:d}' for c in self.candies) + \
+            ']a[' +\
+            ','.join(f'{p:d}' for p in reversed(self.player1_positions[-self.player1_length:])) + \
+            ']b[' +\
+            ','.join(f'{p:d}' for p in reversed(self.player2_positions[-self.player2_length:])) + \
+            ']'
+
+
+def from_repr(x: str) -> Board:
+    size_str, pos_str = x.split('c[')
+    w_str, h_str = size_str.split('x')
+    w = int(w_str)
+    h = int(h_str)
+    board = Board(w, h)
+    candy_str, players_str = pos_str.split(']a[')
+    if candy_str:
+        candy_idc = [int(p) for p in candy_str.split(',')]
+    else:
+        candy_idc = []
+    p1_str, p2_str = players_str.split(']b[')
+    if p1_str and p2_str:
+        p1_idc = [int(p) for p in p1_str.split(',')]
+        p2_idc = [int(p) for p in p2_str[:-1].split(',')]
+    else:
+        return board
+
+    candy_array = [np.array(board.from_index(p - board.DIR_UP_RIGHT)) for p in candy_idc]
+    p1_pos_list = [
+        list(board.from_index(p - board.DIR_UP_RIGHT))
+        for p in p1_idc
+    ]
+    p2_pos_list = [
+        list(board.from_index(p - board.DIR_UP_RIGHT))
+        for p in p2_idc
+    ]
+
+    board.set_state(
+        snake1=Snake(id=1, positions=np.array(p1_pos_list)),
+        snake2=Snake(id=0, positions=np.array(p2_pos_list)),
+        candies=candy_array
+    )
+
+    return board
 
 
 def as_move(move: BoardMove) -> Move:

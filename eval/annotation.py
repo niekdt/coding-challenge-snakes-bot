@@ -80,7 +80,7 @@ def from_image(img) -> AnnotatedBoard:
 
     # find candidate moves
     x_list, y_list = np.where(np.logical_or(
-        np.logical_and(color_grid[1:-1, 1:-1, 1] > 0, color_grid[1:-1, 1:-1, 1] < 180),
+        np.logical_and(color_grid[1:-1, 1:-1, 1] >= 48, color_grid[1:-1, 1:-1, 1] < 180),
         color_grid[1:-1, 1:-1, 1] == 255
     ))
     move_idc = [board.from_xy(x + 1, y + 1) for x, y in zip(x_list, y_list)]

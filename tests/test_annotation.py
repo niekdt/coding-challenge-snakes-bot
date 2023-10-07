@@ -47,6 +47,11 @@ def test_io():
     assert aboard == aboard2cm3
 
 
+def test_load_forced_win():
+    aboard = annotation.from_png('forced-win/corner-behind.png')
+    assert set(aboard.moves) == {BoardMove.DOWN}
+
+
 @pytest.mark.parametrize('folder', ['forced-win', 'forced-loss', 'best-choice', 'two-choice'])
 def test_annotations(folder):
     files = list(pathlib.Path(folder).glob('*.png'))

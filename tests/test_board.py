@@ -1,13 +1,10 @@
 import itertools
-from os import path
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
-from snakes.bots.niekdt.eval import annotation
-from snakes.bots.niekdt.eval.annotation import AnnotatedBoard
 from snakes.constants import Move
 from ..board import Board, as_move, count_move_partitions, BoardMove, from_repr
 from ....snake import Snake
@@ -707,7 +704,7 @@ def test_count_free_space_bfs_delta_walled(size, fs1):
     assert delta_space == fs1 - fs2
 
 
-def shift(x: Tuple, n: int) -> Tuple:
+def shift(x: Tuple, n: int) -> List[bool]:
     return x[n:] + x[:n]
 
 
@@ -738,7 +735,7 @@ def test_count_move_partitions_m2_uni(offset, tl, br, bl):
 @pytest.mark.parametrize('br', [False, True])
 @pytest.mark.parametrize('bl', [False, True])
 def test_count_move_partitions_m2_bump(v, tl, tr, br, bl):
-    assert count_move_partitions((tl, v, tr, not v, br, v, bl, not v)) == 2
+    assert count_move_partitions([tl, v, tr, not v, br, v, bl, not v]) == 2
 
 
 @pytest.mark.parametrize('offset', [0, 2, 4, 6])

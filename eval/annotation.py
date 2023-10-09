@@ -1,10 +1,13 @@
+import os.path
 from os import path
-from typing import List
+from typing import List, Self
 
 import numpy as np
 from numpy import ndarray
 
-from ..board import Board, BoardMove, PosIdx
+from snakes.game import Game
+from ..board import Board, BoardMove, PosIdx, as_move
+from ... import Snek, Slifer
 
 
 class AnnotatedBoard:
@@ -12,12 +15,85 @@ class AnnotatedBoard:
         self.board = board
         self.moves: List[BoardMove] = []
         self.eval = 0
+        self.name = 'undefined'
+
+    def assert_determine_move(self, bot=Snek) -> None:
+        assert len(self.moves) > 0
+        game = self.board.as_game(bot1=bot, bot2=bot)
+
+        move = game.agents[0].determine_next_move(
+            snake=game.snakes[0],
+            other_snakes=[game.snakes[1]],
+            candies=game.candies
+        )
+
+        expected_moves = {as_move(m) for m in self.moves}
+        expected_moves_str = ','.join(map(str, expected_moves))
+        assert move in expected_moves, f'{self.name}: received move {move} instead of ({expected_moves_str})'
+
+    def play_game(self, bot=Snek, bot2=Slifer, max_turns=16) -> Game:
+        game = self.board.as_game(bot1=bot, bot2=bot2)
+
+        while not game.finished() or game.turns >= max_turns:
+            game.update()
+
+        return game
+
+    def assert_game_outcome(self, bot=Snek, bot2=Slifer, max_turns=1000) -> None:
+        game = self.play_game(bot=bot, bot2=bot2, max_turns=max_turns)
+        if self.eval == 0:
+            # game should not have been won by either player
+            assert not game.finished()
+        elif self.eval > 0:
+            # P1 should have won
+            assert game.finished()
+            assert game.scores[0] > game.scores[1]
+        else:
+            # P2 should have won
+            assert game.finished()
+            assert game.scores[0] < game.scores[1]
 
     def show(self) -> None:
         img = self.as_image()
-        img.show()
+        img.show(title=self.name)
 
-    def save(self, name: str) -> None:
+    def flipped(self) -> Self:
+        from PIL import Image
+        img = self.as_image()
+        new_img = img.transpose(Image.FLIP_LEFT_RIGHT)
+
+        other = from_image(new_img)
+        other.eval = self.eval
+        other.name = self.name + '.lr'
+        return other
+
+    def rotated(self) -> Self:
+        from PIL import Image
+        img = self.as_image()
+        new_img = img.transpose(Image.ROTATE_90)
+
+        other = from_image(new_img)
+        other.eval = self.eval
+        other.name = self.name + '.rot'
+        return other
+
+    def orientations(self) -> List[Self]:
+        orig = self.copy()
+        flipped = self.flipped()
+        return [
+            orig,
+            orig.rotated(),
+            orig.rotated().rotated(),
+            orig.rotated().rotated().rotated(),
+            flipped,
+            flipped.rotated(),
+            flipped.rotated().rotated(),
+            flipped.rotated().rotated().rotated()
+        ]
+
+    def save(self, name: str = None) -> None:
+        if name is None:
+            self.name = name
         img = self.as_image()
         file_name = f'{name}.png'
         img.save(file_name)
@@ -52,6 +128,13 @@ class AnnotatedBoard:
             color_grid[(x, y, g)] += 64
 
         return Image.fromarray(np.rot90(color_grid[1:-1, 1:-1, :]))
+
+    def copy(self) -> Self:
+        other = AnnotatedBoard(self.board.copy())
+        other.moves = self.moves.copy()
+        other.eval = self.eval
+        other.name = self.name
+        return other
 
     def __eq__(self, other) -> bool:
         return self.board == other.board and set(self.moves) == set(other.moves) and self.eval == other.eval
@@ -121,4 +204,6 @@ def _gather_player_positions(board: Board, dim, color_grid: ndarray) -> List[Pos
 def from_png(file: str) -> AnnotatedBoard:
     from PIL import Image
     with Image.open(file) as img:
-        return from_image(img)
+        aboard = from_image(img)
+    aboard.name = os.path.splitext(os.path.basename(file))[0]
+    return aboard

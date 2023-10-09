@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal
 
+from snakes.bots import Snek
 from snakes.constants import Move
 from ..board import Board, as_move, count_move_partitions, BoardMove, from_repr
 from ....snake import Snake
@@ -569,6 +570,17 @@ def test_set_state_candy():
 ])
 def test_as_move(board_move, move):
     assert as_move(board_move) == move
+
+
+def test_as_game():
+    b = Board(3, 2)
+    snake1 = Snake(id=0, positions=np.array([[1, 0], [0, 0]]))
+    snake2 = Snake(id=1, positions=np.array([[1, 1], [2, 1]]))
+    b.set_state_from_game(snake1=snake1, snake2=snake2, candies=[(1, 1)])
+
+    game = b.as_game(bot1=Snek, bot2=Snek)
+    assert_array_equal(game.snakes[0].positions, snake1.positions)
+    assert_array_equal(game.snakes[1].positions, snake2.positions)
 
 
 @pytest.mark.parametrize('size', [2, 3, 5])

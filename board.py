@@ -1,13 +1,13 @@
 from collections import deque
-from copy import deepcopy
 from enum import IntEnum, auto, Enum
 from itertools import compress, chain
-from typing import List, TypeVar, Tuple, Iterator
+from typing import List, TypeVar, Tuple, Iterator, Type
 
 import numpy as np
 from numpy import ndarray
 
 from ...constants import Move
+from ...game import Game
 from ...snake import Snake
 
 Self = TypeVar("Self", bound="Board")
@@ -269,6 +269,7 @@ class Board:
         return self.pos_map[index]
 
     def set_state(self, player1_positions: List[PosIdx], player2_positions: List[PosIdx], candy_positions: List[PosIdx]) -> None:
+        # player head is last element
         self.player1_positions = player1_positions
         self.player2_positions = player2_positions
         self.candies = candy_positions
@@ -540,7 +541,18 @@ class Board:
         return a
 
     def copy(self) -> Self:
-        other = deepcopy(self)
+        other = Board(self.width, self.height)
+        other.grid_mask = [*self.grid_mask]
+        other.player1_positions = [*self.player1_positions]
+        other.player2_positions = [*self.player2_positions]
+        other.candies = [*self.candies]
+        other.move_stack = [*self.move_stack]
+        other.player1_pos = self.player1_pos
+        other.player2_pos = self.player2_pos
+        other.player1_length = self.player1_length
+        other.player2_length = self.player2_length
+        other.player1_prev_pos = self.player1_prev_pos
+
         other.push_move_stack = other.move_stack.append
         other.pop_move_stack = other.move_stack.pop
         other.spawn_candy = other.candies.append
@@ -550,6 +562,20 @@ class Board:
         other.pop_player1_position = other.player1_positions.pop
         other.pop_player2_position = other.player2_positions.pop
         return other
+
+    def as_game(self, bot1: Type, bot2: Type) -> Game:
+        p1_positions = [
+            list(self.from_index(p - self.DIR_UP_RIGHT))
+            for p in reversed(self.get_player_positions(player=1))
+        ]
+        p2_positions = [
+            list(self.from_index(p - self.DIR_UP_RIGHT))
+            for p in reversed(self.get_player_positions(player=-1))
+        ]
+        snake1 = Snake(id=0, positions=np.array(p1_positions))
+        snake2 = Snake(id=1, positions=np.array(p2_positions))
+        candies = [np.array(self.from_index(p - self.DIR_UP_RIGHT)) for p in self.candies]
+        return Game(grid_size=self.shape, agents={0: bot1, 1: bot2}, snakes=[snake1, snake2], candies=candies)
 
     def __eq__(self, other) -> bool:
         return self.last_player == other.last_player and \

@@ -4,7 +4,9 @@ from typing import List
 
 import pytest
 
+from snakes.bots import Snek
 from snakes.bots.niekdt.eval import annotation
+from snakes.bots.niekdt.safe_bot import SafeSnek
 
 
 def find_all_positions() -> List[str]:
@@ -16,13 +18,14 @@ def find_positions(path) -> List[str]:
 
 
 @pytest.mark.parametrize('file', find_all_positions())
-def test_move(file):
+@pytest.mark.parametrize('bot', [SafeSnek, Snek])
+def test_move(file, bot):
     aboard = annotation.from_png(file)
     if len(aboard.moves) == 0 or len(aboard.moves) == 3:
         pytest.skip('position has no defined moves')
 
     for orientation in aboard.orientations():
-        orientation.assert_determine_move()
+        orientation.assert_determine_move(bot=bot)
 
 
 @pytest.mark.parametrize('file', find_positions('forced-win'))

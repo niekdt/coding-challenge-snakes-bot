@@ -24,6 +24,7 @@ class NegamaxBot(Bot):
         self.depth: int = depth
         self.eval_fun: callable = eval_fun
         self.board = Board(width=self.grid_size[0], height=self.grid_size[1])
+        self.move_history = dict()
 
     @property
     def name(self) -> str:
@@ -40,7 +41,7 @@ class NegamaxBot(Bot):
         print('Initial game state:', end='')
         print(self.board)
 
-        move_values = negamax_moves(self.board, depth=self.depth, eval_fun=self.eval_fun)
+        move_values = negamax_moves(self.board, depth=self.depth, eval_fun=self.eval_fun, move_history=self.move_history)
 
         print('Root move evaluations:')
         print(move_values)

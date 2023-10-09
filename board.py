@@ -93,7 +93,7 @@ class Board:
         'last_player',
         'move_stack', 'push_move_stack', 'pop_move_stack',
         'pos_map',
-        'DISTANCE',
+        'DISTANCE', 'DISTANCE_TO_EDGE', 'DISTANCE_TO_CENTER',
         'FOUR_WAY_POSITIONS_COND', 'FOUR_WAY_POSITIONS',
         'FOUR_WAY_POSITIONS_FROM_POS_COND', 'FOUR_WAY_POSITIONS_FROM_POS',
         'EIGHT_WAY_POSITIONS_COND', 'EIGHT_WAY_POSITIONS',
@@ -157,9 +157,32 @@ class Board:
             self.DIR_LEFT
         )
 
+        def distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+            return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+
         self.DISTANCE = [
-            [distance(self.from_index(p1), self.from_index(p2)) for p2 in range(len(self.grid_mask))]
+            [int(distance(self.from_index(p1), self.from_index(p2))) for p2 in range(len(self.grid_mask))]
             for p1 in range(len(self.grid_mask))
+        ]
+
+        def distance_to_edge(p: PosIdx) -> int:
+            x, y = self.from_index(p)
+            return max(0, min((x - 1, self.full_width - 2 - x, y - 1, self.full_height - 2 - y)))
+
+        self.DISTANCE_TO_EDGE = [
+            distance_to_edge(p)
+            for p in range(len(self.grid_mask))
+        ]
+
+        def distance_to_center(p: PosIdx) -> int:
+            x, y = self.from_index(p)
+            cx = (self.full_width + 1) / 2
+            cy = (self.full_height + 1) / 2
+            return int(abs(x - cx)) + int(abs(y - cy))
+
+        self.DISTANCE_TO_CENTER = [
+            distance_to_center(p)
+            for p in range(len(self.grid_mask))
         ]
 
         def _move_from_trans(pos_from, pos_to):
@@ -346,6 +369,9 @@ class Board:
         for pos in self.player2_positions[-self.player2_length:]:
             mask[pos] = True
         return mask
+
+    def are_players_adjacent(self) -> bool:
+        return self.DISTANCE[self.player1_pos][self.player2_pos] == 1
 
     def can_move(self, player: int) -> bool:
         if player == 1:
@@ -656,11 +682,6 @@ def from_repr(x: str) -> Board:
 
 def as_move(move: BoardMove) -> Move:
     return MOVE_MAP[move]
-
-
-def distance(pos1: Pos, pos2: Pos) -> int:
-    """L1 distance between the given positions"""
-    return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
 
 def count_move_partitions(cells: List[bool]) -> int:

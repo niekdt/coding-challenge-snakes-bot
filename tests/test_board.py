@@ -1,4 +1,5 @@
 import itertools
+from math import floor
 from typing import Tuple, List
 
 import numpy as np
@@ -38,8 +39,8 @@ def test_empty_hash(width, height):
     assert Board(width, height).approx_hash() == Board(width, height).approx_hash()
 
 
-@pytest.mark.parametrize('width', [4, 16])
-@pytest.mark.parametrize('height', [4, 16])
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
 def test_distance(width, height):
     b = Board(width, height)
     for x1, y1 in itertools.product(range(b.full_width), range(b.full_height)):
@@ -48,6 +49,30 @@ def test_distance(width, height):
             p2 = b.from_xy(x2, y2)
             assert b.DISTANCE[p1][p2] == abs(x1 - x2) + abs(y1 - y2)
             assert b.DISTANCE[p2][p1] == b.DISTANCE[p1][p2]
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
+def test_distance_to_center(width, height):
+    b = Board(width, height)
+    cx = (b.full_width + 1) / 2
+    cy = (b.full_height + 1) / 2
+    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
+        p = b.from_xy(x, y)
+        assert b.DISTANCE_TO_CENTER[p] == floor(abs(x - cx)) + floor(abs(y - cy))
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
+def test_distance_to_edge(width, height):
+    b = Board(width, height)
+    for x, y in itertools.product(range(b.full_width), range(b.full_height)):
+        p = b.from_xy(x, y)
+        if x <= 1 or x >= b.full_width - 2 or y <= 1 or y >= b.full_height - 2:
+            assert b.DISTANCE_TO_EDGE[p] == 0
+        else:
+            assert b.DISTANCE_TO_EDGE[p] > 0
+            assert b.DISTANCE_TO_EDGE[p] == min((x - 1, b.full_width - 2 - x, y - 1, b.full_height - 2 - y))
 
 
 @pytest.mark.parametrize('width', [4, 16])

@@ -13,12 +13,15 @@ def pvs_moves(
         eval_fun: callable,
         move_history: Dict
 ) -> Dict[BoardMove, float]:
+    player1_last_move = board.MOVE_FROM_TRANS[board.player1_prev_pos][board.player1_pos]
+    player2_last_move = board.MOVE_FROM_TRANS[board.player2_prev_pos][board.player2_pos]
+
     # suicide
     if board.player1_length > 2 * board.player2_length:
         return {board.MOVE_FROM_TRANS[board.player1_pos][board.player1_prev_pos]: inf}
 
     board_hash = hash(board)
-    move_order = move_history.get(board_hash, board.MOVES_FROM_POS_TRANS[board.player1_prev_pos][board.player1_pos])
+    move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[player1_last_move])
     moves = list(board.iterate_valid_moves(player=1, order=move_order))
 
     alpha = -inf
@@ -31,16 +34,16 @@ def pvs_moves(
         if best_value == -inf and move == moves[-1]:
             if __debug__:
                 print('Skipping last root move evaluation because all other moves sucked')
-            # best_move = move
+            best_move = move
             # best_value = 0
-            # break
+            break
 
         if __debug__:
             print(f'== Evaluate {move} with alpha={alpha} ==')
         board.perform_move(move, player=1)
         value = -pvs(
             board,
-            my_move=BOARD_MOVE_LEFT,
+            my_move=player2_last_move,
             opponent_move=move,
             depth_left=depth - 1,
             depth=1,

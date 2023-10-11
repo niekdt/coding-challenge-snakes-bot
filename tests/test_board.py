@@ -263,6 +263,19 @@ def test_is_candy_pos(width, height):
             assert not b.from_xy(x, y) in b.candies
 
 
+def test_copy():
+    b = Board(3, 3)
+    b.set_state_from_game(
+        snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
+        snake2=Snake(id=1, positions=np.array([[1, 2], [2, 2]])),
+        candies=[]
+    )
+    b0 = b.copy()
+    assert b0 == b
+    assert hash(b) == hash(b0)
+    assert b.approx_hash() == b0.approx_hash()
+
+
 def test_set_state():
     b = Board(3, 2)
     b.set_state_from_game(

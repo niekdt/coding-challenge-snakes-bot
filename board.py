@@ -569,15 +569,18 @@ class Board:
     def copy(self) -> Self:
         other = Board(self.width, self.height)
         other.grid_mask = [*self.grid_mask]
-        other.player1_positions = [*self.player1_positions]
-        other.player2_positions = [*self.player2_positions]
         other.candies = [*self.candies]
         other.move_stack = [*self.move_stack]
+        other.last_player = self.last_player
+        other.player1_positions = [*self.player1_positions]
+        other.player2_positions = [*self.player2_positions]
         other.player1_pos = self.player1_pos
         other.player2_pos = self.player2_pos
         other.player1_length = self.player1_length
         other.player2_length = self.player2_length
         other.player1_prev_pos = self.player1_prev_pos
+        other.player2_prev_pos = self.player2_prev_pos
+        other.hash = self.hash
 
         other.push_move_stack = other.move_stack.append
         other.pop_move_stack = other.move_stack.pop

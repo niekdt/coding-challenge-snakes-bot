@@ -524,20 +524,20 @@ def test_undo_move_candy():
 
 def test_print():
     b = Board(3, 2)
-    assert str(b) == '\n+---+\n|···|\n|···|\n+---+'
+    assert str(b).startswith('\n+---+\n|···|\n|···|\n+---+')
 
     b.set_state_from_game(
         snake1=Snake(id=0, positions=np.array([[1, 0], [0, 0]])),
         snake2=Snake(id=1, positions=np.array([[1, 1], [2, 1]])),
         candies=[]
     )
-    assert str(b) == '\n+---+\n|·Bb|\n|aA·|\n+---+'
+    assert str(b).startswith('\n+---+\n|·Bb|\n|aA·|\n+---+')
 
     b.perform_move(BoardMove.RIGHT, player=1)
-    assert str(b) == '\n+---+\n|·Bb|\n|·aA|\n+---+'
+    assert str(b).startswith('\n+---+\n|·Bb|\n|·aA|\n+---+')
 
     b.perform_move(BoardMove.LEFT, player=-1)
-    assert str(b) == '\n+---+\n|Bb·|\n|·aA|\n+---+'
+    assert str(b).startswith('\n+---+\n|Bb·|\n|·aA|\n+---+')
 
 
 def test_repr():

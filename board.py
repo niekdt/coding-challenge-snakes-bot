@@ -664,7 +664,9 @@ class Board:
             replace(']', ''). \
             replace("'", ''). \
             replace(' ', ''). \
-            replace('_', '·')
+            replace('_', '·') + \
+            '\nRepr: ' +\
+            repr(self)
 
     def __repr__(self) -> str:
         return f'{self.width:d}x{self.height:d}c[' +\

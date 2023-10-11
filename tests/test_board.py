@@ -53,6 +53,18 @@ def test_distance(width, height):
 
 @pytest.mark.parametrize('width', [5, 16])
 @pytest.mark.parametrize('height', [5, 16])
+def test_chebyshev_distance(width, height):
+    b = Board(width, height)
+    for x1, y1 in itertools.product(range(b.full_width), range(b.full_height)):
+        for x2, y2 in itertools.product(range(b.full_width), range(b.full_height)):
+            p1 = b.from_xy(x1, y1)
+            p2 = b.from_xy(x2, y2)
+            assert b.EIGHT_WAY_DISTANCE[p1][p2] == max(abs(x1 - x2), abs(y1 - y2))
+            assert b.EIGHT_WAY_DISTANCE[p2][p1] == b.EIGHT_WAY_DISTANCE[p1][p2]
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
 def test_distance_to_center(width, height):
     b = Board(width, height)
     cx = (b.full_width + 1) / 2

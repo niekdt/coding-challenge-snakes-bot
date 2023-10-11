@@ -93,7 +93,8 @@ class Board:
         'last_player',
         'move_stack', 'push_move_stack', 'pop_move_stack',
         'pos_map',
-        'DISTANCE', 'DISTANCE_TO_EDGE', 'DISTANCE_TO_CENTER',
+        'DISTANCE', 'EIGHT_WAY_DISTANCE',
+        'DISTANCE_TO_EDGE', 'DISTANCE_TO_CENTER',
         'FOUR_WAY_POSITIONS_COND', 'FOUR_WAY_POSITIONS',
         'FOUR_WAY_POSITIONS_FROM_POS_COND', 'FOUR_WAY_POSITIONS_FROM_POS',
         'EIGHT_WAY_POSITIONS_COND', 'EIGHT_WAY_POSITIONS',
@@ -157,11 +158,25 @@ class Board:
             self.DIR_LEFT
         )
 
-        def distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+        def manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
             return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 
         self.DISTANCE = [
-            [int(distance(self.from_index(p1), self.from_index(p2))) for p2 in range(len(self.grid_mask))]
+            [
+                int(manhattan_distance(self.from_index(p1), self.from_index(p2)))
+                for p2 in range(len(self.grid_mask))
+            ]
+            for p1 in range(len(self.grid_mask))
+        ]
+
+        def chebyshev_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+            return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
+
+        self.EIGHT_WAY_DISTANCE = [
+            [
+                chebyshev_distance(self.from_index(p1), self.from_index(p2))
+                for p2 in range(len(self.grid_mask))
+            ]
             for p1 in range(len(self.grid_mask))
         ]
 

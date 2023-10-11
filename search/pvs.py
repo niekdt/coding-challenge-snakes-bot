@@ -104,6 +104,11 @@ def pvs(
     if not board.can_move(player):
         return -2 << 30
 
+    # check for edge trap
+    trapped_player = board.get_edge_trapped_player(player)
+    if trapped_player != 0:
+        return -player * trapped_player * (2 << 30)
+
     board_hash = hash(board)
     move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[my_move])
     moves = board.iterate_valid_moves(player=player, order=move_order)
@@ -116,7 +121,7 @@ def pvs(
     }
 
     # do first move
-    move = next(moves, BOARD_MOVE_UP)
+    move = next(moves)
     board.perform_move(move, player=player)
     value = -pvs(
         board,
@@ -226,7 +231,7 @@ def qsearch(
 
 
 def is_quiet_node(board: Board) -> bool:
-    return board.DISTANCE[board.player1_pos][board.player2_pos] > 3 and \
+    return board.EIGHT_WAY_DISTANCE[board.player1_pos][board.player2_pos] > 1 and \
         board.count_moves(player=1) > 1 and \
         board.count_moves(player=-1) > 1 and \
         board.count_player_move_partitions(player=1) <= 1 and \

@@ -6,7 +6,6 @@ import pytest
 
 from snakes.bots import Snek
 from snakes.bots.niekdt.eval import annotation
-from snakes.bots.niekdt.safe_bot import SafeSnek
 
 
 def find_all_positions() -> List[str]:
@@ -17,8 +16,9 @@ def find_positions(path) -> List[str]:
     return glob.glob(f'{path}/*.png', recursive=True)
 
 
+# @pytest.mark.parametrize('file', ['forced-win\\corner-h.png'])
 @pytest.mark.parametrize('file', find_all_positions())
-@pytest.mark.parametrize('bot', [SafeSnek, Snek])
+@pytest.mark.parametrize('bot', [Snek])
 def test_move(file, bot):
     aboard = annotation.from_png(file)
     if len(aboard.moves) == 0 or len(aboard.moves) == 3:

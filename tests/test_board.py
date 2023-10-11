@@ -499,6 +499,13 @@ def test_undo_move():
     assert b.approx_hash() == b_start.approx_hash()
 
 
+def test_integrity():
+    b = from_repr('16x16c[]a[38,39]b[37,19]')
+    b.perform_move(BoardMove.LEFT, player=1)
+    assert b.count_moves(player=-1) == 1
+    # b.perform_move(BoardMove.UP, player=-1)
+
+
 def test_undo_move_candy():
     b = Board(3, 3)
     b.set_state_from_game(

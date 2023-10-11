@@ -388,6 +388,23 @@ class Board:
     def are_players_adjacent(self) -> bool:
         return self.DISTANCE[self.player1_pos][self.player2_pos] == 1
 
+    def are_players_near(self) -> bool:
+        return self.EIGHT_WAY_DISTANCE[self.player1_pos][self.player2_pos] == 1
+
+    def get_edge_trapped_player(self, player) -> int:
+        # Returns 1 if P1 is trapped, -1 if P2 is trapped, 0 if neither are trapped
+        if self.are_players_adjacent():
+            # players are alongside
+            if self.DISTANCE_TO_EDGE[self.player1_pos] == 0:
+                # P1 is at the edge, so P2 must not be
+                return 1 if self.DISTANCE_TO_EDGE[self.player2_pos] > 0 else 0
+            elif self.DISTANCE_TO_EDGE[self.player2_pos] == 0:
+                # P1 is not at the edge, and P2 is
+                return -1
+            else:
+                return 0
+        return 0
+
     def can_move(self, player: int) -> bool:
         if player == 1:
             pos_options = self.FOUR_WAY_POSITIONS[self.player1_pos]
@@ -445,6 +462,7 @@ class Board:
         direction = self.MOVE_POS_OFFSET[move]
         if player == 1:
             target_pos = self.player1_pos + direction
+            assert self.is_empty_pos(target_pos), 'P1 tried illegal move'
             tail_pos = self.player1_positions[-self.player1_length]
 
             # update game state
@@ -467,6 +485,7 @@ class Board:
                 self.grid_mask[tail_pos] = True
         else:
             target_pos = self.player2_pos + direction
+            assert self.is_empty_pos(target_pos), 'P2 tried illegal move'
             tail_pos = self.player2_positions[-self.player2_length]
 
             # update game state

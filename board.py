@@ -573,6 +573,7 @@ class Board:
                     mask[new_pos] = False
                     free_space[player] += 1
                     queue.append((player, new_pos, cur_dist + 1))
+            assert len(queue) < 200
             if not queue:
                 break
             player, pos, cur_dist = queue.popleft()

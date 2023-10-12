@@ -23,11 +23,11 @@ def evaluate(board: Board, player: int) -> float:
     #f1 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p1_pos, prev_pos=board.player1_prev_pos, lb=lb, max_dist=10))
     #f2 = min(lb, board.count_free_space_bfs(board.get_empty_mask(), pos=p2_pos, prev_pos=board.player2_prev_pos, lb=lb, max_dist=10))
     if player == 1:
-        delta_space, _, _ = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p1_pos, pos2=p2_pos, max_dist=16, delta_lb=15)
+        delta_space, _, _ = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p1_pos, pos2=p2_pos, max_dist=32, delta_lb=32)
     else:
-        delta_space, _, _ = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p2_pos, pos2=p1_pos, max_dist=16, delta_lb=15)
+        delta_space, _, _ = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p2_pos, pos2=p1_pos, max_dist=32, delta_lb=32)
         delta_space *= -1
-    if abs(delta_space) < 5:
+    if abs(delta_space) < 2:
         delta_space = 0
     score += 10 * delta_space
 

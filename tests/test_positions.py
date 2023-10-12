@@ -5,7 +5,7 @@ from typing import List
 import pytest
 
 from snakes.bots import Snek
-from snakes.bots.niekdt.eval import annotation
+from snakes.bots.niekdt.eval import annotation, best
 
 
 def find_all_positions() -> List[str]:
@@ -14,6 +14,32 @@ def find_all_positions() -> List[str]:
 
 def find_positions(path) -> List[str]:
     return glob.glob(f'{path}/*.png', recursive=True)
+
+
+@pytest.mark.parametrize('file', ['best-choice\\gap-17.png'])
+@pytest.mark.parametrize('eval_fun', [best.evaluate])
+def test_eval(file, eval_fun):
+    aboard = annotation.from_png(file)
+    board = aboard.board
+    moves = list(board.iterate_valid_moves(player=1))
+
+    move_values = dict(zip(moves, [-inf] * 4))
+    for m in moves:
+        print(f'\n\nPerform move {m}')
+        board.perform_move(m, player=1)
+        print(board)
+        value = eval_fun(aboard.board, player=1)
+        print(f'VALUE: {value:,d}')
+        move_values[m] = value
+        board.undo_move(player=1)
+    best_value = max(move_values.values())
+
+    print('-' * 50)
+    print('Move scores:')
+    print(move_values)
+    best_moves = [k for k in move_values.keys() if move_values[k] == best_value]
+
+    assert set(best_moves) in set(aboard.moves)
 
 
 # @pytest.mark.parametrize('file', ['forced-win\\corner-h.png'])

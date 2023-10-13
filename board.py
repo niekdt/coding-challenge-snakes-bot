@@ -306,7 +306,12 @@ class Board:
     def from_index(self, index: PosIdx) -> Pos:
         return self.pos_map[index]
 
-    def set_state(self, player1_positions: List[PosIdx], player2_positions: List[PosIdx], candy_positions: List[PosIdx]) -> None:
+    def set_state(
+            self,
+            player1_positions: List[PosIdx],
+            player2_positions: List[PosIdx],
+            candy_positions: List[PosIdx]
+    ) -> None:
         # player head is last element
         self.player1_positions = player1_positions
         self.player2_positions = player2_positions
@@ -554,8 +559,15 @@ class Board:
 
         return free_space
 
-    def count_free_space_bfs_delta(self, mask: GridMask, pos1: PosIdx, pos2: PosIdx, max_dist: int, delta_lb: int) -> \
-            Tuple[int, int, int]:
+    def count_free_space_bfs_delta(
+            self,
+            mask: GridMask,
+            pos1: PosIdx,
+            pos2: PosIdx,
+            min_dist: int = 1000,
+            max_dist: int = 1000,
+            delta_lb: int = 1000
+    ) -> Tuple[int, int, int]:
         mask[pos1] = False
         mask[pos2] = False
         pos = pos1
@@ -567,7 +579,7 @@ class Board:
         queue = deque(maxlen=256)
         queue.append((1, pos2, 0))
 
-        while abs(delta_space) < delta_lb and cur_dist < max_dist:
+        while cur_dist < min_dist or (abs(delta_space) < delta_lb and cur_dist < max_dist):
             for new_pos in pos_options[pos]:
                 if mask[new_pos]:
                     mask[new_pos] = False
@@ -685,15 +697,15 @@ class Board:
             replace("'", ''). \
             replace(' ', ''). \
             replace('_', '·') + \
-            '\nRepr: ' +\
+            '\nRepr: ' + \
             repr(self)
 
     def __repr__(self) -> str:
-        return f'{self.width:d}x{self.height:d}c[' +\
+        return f'{self.width:d}x{self.height:d}c[' + \
             ','.join(f'{c:d}' for c in self.candies) + \
-            ']a[' +\
+            ']a[' + \
             ','.join(f'{p:d}' for p in reversed(self.get_player_positions(player=1))) + \
-            ']b[' +\
+            ']b[' + \
             ','.join(f'{p:d}' for p in reversed(self.get_player_positions(player=-1))) + \
             ']'
 

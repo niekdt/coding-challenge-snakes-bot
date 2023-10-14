@@ -843,3 +843,49 @@ def test_count_move_partitions_m3_tri(offset, br, bl):
     assert count_move_partitions(
         shift((False, True, False, True, br, False, bl, True), offset)
     ) == 3
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
+def test_territory1(width, height):
+    b = Board(width, height)
+    for x1, y1 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+        p1 = b.from_xy(x1, y1)
+        for x2, y2 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+            p2 = b.from_xy(x2, y2)
+            if p1 == p2:
+                continue
+            _, ref_space, _ = b.count_free_space_bfs_delta(b.get_empty_mask(), pos1=p1, pos2=p2)
+            assert ref_space >= 2
+            assert ref_space <= width * height - 1
+            assert b.TERRITORY1[p1][p2] == ref_space
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
+def test_territory2(width, height):
+    b = Board(width, height)
+    for x1, y1 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+        p1 = b.from_xy(x1, y1)
+        for x2, y2 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+            p2 = b.from_xy(x2, y2)
+            if p1 == p2:
+                continue
+            ref_space = width * height - b.TERRITORY1[p1][p2]
+            assert ref_space >= 1
+            assert ref_space <= width * height - 1
+            assert b.TERRITORY2[p1][p2] == ref_space
+
+
+@pytest.mark.parametrize('width', [5, 16])
+@pytest.mark.parametrize('height', [5, 16])
+def test_territory_delta(width, height):
+    b = Board(width, height)
+    for x1, y1 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+        p1 = b.from_xy(x1, y1)
+        for x2, y2 in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
+            p2 = b.from_xy(x2, y2)
+            if p1 == p2:
+                continue
+            ref_delta = b.TERRITORY1[p1][p2] - b.TERRITORY2[p1][p2]
+            assert b.DELTA_TERRITORY[p1][p2] == ref_delta

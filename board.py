@@ -103,6 +103,7 @@ class Board:
         'MOVES_FROM_POS', 'MOVES_FROM_POS_COND', 'MOVES_FROM_POS_TRANS',
         'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
         'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
+        'TERRITORY1', 'TERRITORY2', 'DELTA_TERRITORY'
     )
 
     def __init__(self, width: int, height: int) -> None:
@@ -243,7 +244,7 @@ class Board:
             else:
                 return candidate_positions
 
-        self.FOUR_WAY_POSITIONS_FROM_POS_COND: List[List] = [
+        self.FOUR_WAY_POSITIONS_FROM_POS_COND: List[List[Tuple[PosIdx, ...]]] = [
             [
                 _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS_COND)
                 for pos_new in range(len(self.grid_mask))
@@ -295,6 +296,27 @@ class Board:
                 for pos_new in range(len(self.grid_mask))
             ]
             for pos_old in range(len(self.grid_mask))
+        ]
+
+        def compute_p1_territory(p1: PosIdx, p2: PosIdx) -> int:
+            if p1 == p2 or not self.is_empty_pos(p1) or not self.is_empty_pos(p2):
+                return 0
+
+            mask = self.get_empty_mask()
+            _, fs, _ = self.count_free_space_bfs_delta(mask, pos1=p1, pos2=p2)
+            return fs
+
+        self.TERRITORY1: List[List[int]] = [
+            [compute_p1_territory(p1, p2) for p2 in range(len(self.grid_mask))]
+            for p1 in range(len(self.grid_mask))
+        ]
+        self.TERRITORY2: List[List[int]] = [
+            [self.width * self.height - self.TERRITORY1[p1][p2] for p2 in range(len(self.grid_mask))]
+            for p1 in range(len(self.grid_mask))
+        ]
+        self.DELTA_TERRITORY: List[List[int]] = [
+            [self.TERRITORY1[p1][p2] - self.TERRITORY2[p1][p2] for p2 in range(len(self.grid_mask))]
+            for p1 in range(len(self.grid_mask))
         ]
 
     def from_pos(self, pos: Pos) -> PosIdx:

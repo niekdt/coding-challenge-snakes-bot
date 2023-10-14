@@ -12,16 +12,13 @@ def evaluate(board: Board, player: int) -> float:
     p2_dist = board.DISTANCE[p2_pos]
 
     # length
-    score = 1000 * (board.player1_length - board.player2_length) ** 3
+    score = 20000 * (board.player1_length - board.player2_length)
     # candy dist
     score += 10 * sum([p2_dist[candy_pos] - p1_dist[candy_pos] for candy_pos in board.candies])
 
     # candy mode
-    if board.player1_length < 10 or board.player2_length < 10:
+    if player == 1 and board.player1_length < 12 or player == -1 and board.player2_length < 12:
         return player * score
-
-    # free space lower bound
-    lb = 32
 
     if player == 1:
         delta_space, fs0, fs1 = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p1_pos, pos2=p2_pos)
@@ -31,7 +28,10 @@ def evaluate(board: Board, player: int) -> float:
 
     score += int(10000 * log(fs0 / fs1))
 
-    # distance to center
-    score += 5 * (p2_dist[board.center] - p1_dist[board.center])
+    # positional bonus
+    if player == 1:
+        score += 100 * board.DELTA_TERRITORY[p1_pos][p2_pos]
+    else:
+        score -= 100 * board.DELTA_TERRITORY[p2_pos][p1_pos]
 
     return player * score

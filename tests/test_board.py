@@ -8,7 +8,7 @@ from numpy.testing import assert_array_equal
 
 from snakes.bots import Snek
 from snakes.constants import Move
-from ..board import Board, as_move, count_move_partitions, BoardMove, from_repr
+from ..board import Board, count_move_partitions, BoardMove, from_repr, MOVE_MAP
 from ....snake import Snake
 
 
@@ -625,8 +625,8 @@ def test_set_state_candy():
     (BoardMove.UP, Move.UP),
     (BoardMove.DOWN, Move.DOWN)
 ])
-def test_as_move(board_move, move):
-    assert as_move(board_move) == move
+def test_move_map(board_move, move):
+    assert MOVE_MAP[board_move] == move
 
 
 def test_as_game():

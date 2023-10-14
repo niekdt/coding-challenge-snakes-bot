@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from ..board import Board, as_move
+from ..board import Board, MOVE_MAP
 from ..eval import death
 from ..search.choose import best_move
 from ..search.negamax import negamax_moves
@@ -48,4 +48,4 @@ class NegamaxBot(Bot):
         move = best_move(move_values)
 
         print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
-        return as_move(move)
+        return MOVE_MAP[move]

@@ -3,7 +3,7 @@ from typing import List, Tuple
 
 import numpy as np
 
-from ..board import Board, as_move
+from ..board import Board, MOVE_MAP
 from ..eval import death
 from ..search.choose import best_move, get_best_moves_count
 from ..search.pvs import pvs_moves
@@ -61,4 +61,4 @@ class NegamaxAbBot(Bot):
 
         if __debug__:
             print(f'== Decided on {move} in {(time.time() - start) * 1000:.2f} ms ==')
-        return as_move(move)
+        return MOVE_MAP[move]

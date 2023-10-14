@@ -732,10 +732,6 @@ def from_repr(x: str) -> Board:
     return board
 
 
-def as_move(move: BoardMove) -> Move:
-    return MOVE_MAP[move]
-
-
 def count_move_partitions(cells: List[bool]) -> int:
     assert len(cells) == 8
 

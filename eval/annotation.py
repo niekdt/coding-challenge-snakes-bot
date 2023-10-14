@@ -6,7 +6,7 @@ import numpy as np
 from numpy import ndarray
 
 from snakes.game import Game
-from ..board import Board, BoardMove, PosIdx, as_move
+from ..board import Board, BoardMove, PosIdx, MOVE_MAP
 from ... import Snek, Slifer
 
 
@@ -27,7 +27,7 @@ class AnnotatedBoard:
             candies=game.candies
         )
 
-        expected_moves = {as_move(m) for m in self.moves}
+        expected_moves = {MOVE_MAP[m] for m in self.moves}
         expected_moves_str = ','.join(map(str, expected_moves))
         assert move in expected_moves, f'{self.name}: received move {move} instead of ({expected_moves_str})'
 

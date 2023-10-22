@@ -1,7 +1,7 @@
-from collections import deque
 from enum import IntEnum, auto, Enum
+from functools import lru_cache
 from itertools import compress, chain
-from typing import List, TypeVar, Tuple, Iterator, Type
+from typing import List, TypeVar, Tuple, Iterator, Type, Dict
 
 import numpy as np
 from numpy import ndarray
@@ -10,7 +10,7 @@ from ...constants import Move
 from ...game import Game
 from ...snake import Snake
 
-Self = TypeVar("Self", bound="Board")
+Self = TypeVar('Self', bound='Board')
 Pos = Tuple[int, int]
 PosIdx = int
 Grid = List[int]
@@ -32,18 +32,19 @@ BOARD_MOVE_RIGHT = BoardMove.RIGHT
 
 
 class Direction(IntEnum):
-    TOP = auto()
-    TOP_RIGHT = auto()
+    UP_LEFT = auto()
+    UP = auto()
+    UP_RIGHT = auto()
     RIGHT = auto()
-    BOTTOM_RIGHT = auto()
-    BOTTOM = auto()
-    BOTTOM_LEFT = auto()
+    DOWN_RIGHT = auto()
+    DOWN = auto()
+    DOWN_LEFT = auto()
     LEFT = auto()
-    TOP_LEFT = auto()
     __str__ = Enum.__str__
 
 
 MOVES = (BoardMove.LEFT, BoardMove.RIGHT, BoardMove.UP, BoardMove.DOWN)
+DIRECTIONS = tuple(d for d in Direction)
 
 MOVE_MAP = {
     BoardMove.UP: Move.UP,
@@ -101,8 +102,7 @@ class Board:
         'EIGHT_WAY_POSITIONS_FROM_POS_COND', 'EIGHT_WAY_POSITIONS_FROM_POS',
         'MOVE_POS_OFFSET', 'MOVE_FROM_TRANS',
         'MOVES_FROM_POS', 'MOVES_FROM_POS_COND', 'MOVES_FROM_POS_TRANS',
-        'FOUR_WAY_POS_OFFSETS', 'EIGHT_WAY_POS_OFFSETS',
-        'DIR_UP_LEFT', 'DIR_UP', 'DIR_UP_RIGHT', 'DIR_RIGHT', 'DIR_DOWN_RIGHT', 'DIR_DOWN', 'DIR_DOWN_LEFT', 'DIR_LEFT',
+        'GAME_POS_OFFSET',
         'TERRITORY1', 'TERRITORY2', 'DELTA_TERRITORY'
     )
 
@@ -129,77 +129,18 @@ class Board:
         self.move_stack: List[PosIdx, bool, int] = []
         self.push_move_stack, self.pop_move_stack = self.move_stack.append, self.move_stack.pop
         self.spawn_candy, self.remove_candy = self.candies.append, self.candies.remove
-        self.pos_map = tuple([divmod(i, self.full_height) for i in range(0, self.full_width * self.full_height)])
+        self.pos_map = tuple(
+            [pos_to_xy(p, self.full_width, self.full_height) for p in range(self.full_width * self.full_height)]
+        )
         self.center: PosIdx = self.from_xy(int(width / 2) + 1, int(height / 2) + 1)
 
-        self.DIR_UP_LEFT = -self.full_height + 1
-        self.DIR_UP = 1
-        self.DIR_UP_RIGHT = self.full_height + 1
-        self.DIR_RIGHT = self.full_height
-        self.DIR_DOWN_RIGHT = self.full_height - 1
-        self.DIR_DOWN = -1
-        self.DIR_DOWN_LEFT = -self.full_height - 1
-        self.DIR_LEFT = -self.full_height
+        self.MOVE_POS_OFFSET = generate_move_offsets_map(self.full_width, self.full_height)
+        self.DISTANCE = generate_l1_distance_lookup(self.full_width, self.full_height)
+        self.EIGHT_WAY_DISTANCE = generate_chebyshev_distance_lookup(self.full_width, self.full_height)
+        self.DISTANCE_TO_EDGE = generate_edge_distance_lookup(self.full_width, self.full_height)
+        self.DISTANCE_TO_CENTER = generate_center_distance_lookup(self.full_width, self.full_height)
 
-        self.MOVE_POS_OFFSET = {
-            BoardMove.UP: self.DIR_UP,
-            BoardMove.RIGHT: self.DIR_RIGHT,
-            BoardMove.DOWN: self.DIR_DOWN,
-            BoardMove.LEFT: self.DIR_LEFT
-        }
-        self.FOUR_WAY_POS_OFFSETS = tuple(self.MOVE_POS_OFFSET[m] for m in MOVES)
-        self.EIGHT_WAY_POS_OFFSETS = (
-            self.DIR_UP_LEFT,
-            self.DIR_UP,
-            self.DIR_UP_RIGHT,
-            self.DIR_RIGHT,
-            self.DIR_DOWN_RIGHT,
-            self.DIR_DOWN,
-            self.DIR_DOWN_LEFT,
-            self.DIR_LEFT
-        )
-
-        def manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
-            return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
-
-        self.DISTANCE = [
-            [
-                int(manhattan_distance(self.from_index(p1), self.from_index(p2)))
-                for p2 in range(len(self.grid_mask))
-            ]
-            for p1 in range(len(self.grid_mask))
-        ]
-
-        def chebyshev_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
-            return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
-
-        self.EIGHT_WAY_DISTANCE = [
-            [
-                chebyshev_distance(self.from_index(p1), self.from_index(p2))
-                for p2 in range(len(self.grid_mask))
-            ]
-            for p1 in range(len(self.grid_mask))
-        ]
-
-        def distance_to_edge(p: PosIdx) -> int:
-            x, y = self.from_index(p)
-            return max(0, min((x - 1, self.full_width - 2 - x, y - 1, self.full_height - 2 - y)))
-
-        self.DISTANCE_TO_EDGE = [
-            distance_to_edge(p)
-            for p in range(len(self.grid_mask))
-        ]
-
-        def distance_to_center(p: PosIdx) -> int:
-            x, y = self.from_index(p)
-            cx = (self.full_width + 1) / 2
-            cy = (self.full_height + 1) / 2
-            return int(abs(x - cx)) + int(abs(y - cy))
-
-        self.DISTANCE_TO_CENTER = [
-            distance_to_center(p)
-            for p in range(len(self.grid_mask))
-        ]
+        self.GAME_POS_OFFSET = generate_direction_offsets_map(self.full_width, self.full_height)[Direction.UP_RIGHT]
 
         def _move_from_trans(pos_from, pos_to):
             if abs(pos_to - pos_from) == 1:
@@ -222,15 +163,8 @@ class Board:
                 x, y = self.from_index(pos)
                 return 0 < x < self.full_width - 1 and 0 < y < self.full_height - 1
 
-        self.FOUR_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
-            tuple(p + d for d in self.FOUR_WAY_POS_OFFSETS)
-            for p in range(len(self.grid_mask))
-        ]
-
-        self.FOUR_WAY_POSITIONS_COND: List[Tuple[PosIdx, ...]] = [
-            tuple(filter(is_within_bounds, [p + d for d in self.FOUR_WAY_POS_OFFSETS]))
-            for p in range(len(self.grid_mask))
-        ]
+        self.FOUR_WAY_POSITIONS = generate_4way_positions(self.full_width, self.full_height)
+        self.FOUR_WAY_POSITIONS_COND = generate_4way_bounded_positions(self.full_width, self.full_height)
 
         self.MOVES_FROM_POS_COND: List[List[PosIdx, ...]] = [
             [m for m in MOVES if is_within_bounds(p + self.MOVE_POS_OFFSET[m])]
@@ -260,15 +194,8 @@ class Board:
             for pos_old in range(len(self.grid_mask))
         ]
 
-        self.EIGHT_WAY_POSITIONS: List[Tuple[PosIdx, ...]] = [
-            tuple(p + d for d in self.EIGHT_WAY_POS_OFFSETS)
-            for p in range(len(self.grid_mask))
-        ]
-
-        self.EIGHT_WAY_POSITIONS_COND: List[Tuple[PosIdx, ...]] = [
-            tuple(filter(is_within_bounds, [p + d for d in self.EIGHT_WAY_POS_OFFSETS]))
-            for p in range(len(self.grid_mask))
-        ]
+        self.EIGHT_WAY_POSITIONS = generate_8way_positions(self.full_width, self.full_height)
+        self.EIGHT_WAY_POSITIONS_COND = generate_8way_bounded_positions(self.full_width, self.full_height)
 
         self.EIGHT_WAY_POSITIONS_FROM_POS_COND: List[List] = [
             [
@@ -298,26 +225,8 @@ class Board:
             for pos_old in range(len(self.grid_mask))
         ]
 
-        def compute_p1_territory(p1: PosIdx, p2: PosIdx) -> int:
-            if p1 == p2 or not self.is_empty_pos(p1) or not self.is_empty_pos(p2):
-                return 0
-
-            mask = self.get_empty_mask()
-            _, fs, _ = self.count_free_space_bfs_delta(mask, pos1=p1, pos2=p2)
-            return fs
-
-        self.TERRITORY1: List[List[int]] = [
-            [compute_p1_territory(p1, p2) for p2 in range(len(self.grid_mask))]
-            for p1 in range(len(self.grid_mask))
-        ]
-        self.TERRITORY2: List[List[int]] = [
-            [self.width * self.height - self.TERRITORY1[p1][p2] for p2 in range(len(self.grid_mask))]
-            for p1 in range(len(self.grid_mask))
-        ]
-        self.DELTA_TERRITORY: List[List[int]] = [
-            [self.TERRITORY1[p1][p2] - self.TERRITORY2[p1][p2] for p2 in range(len(self.grid_mask))]
-            for p1 in range(len(self.grid_mask))
-        ]
+        self.TERRITORY1, self.TERRITORY2, self.DELTA_TERRITORY = \
+            generate_territory_lookup(self.full_width, self.full_height)
 
     def from_pos(self, pos: Pos) -> PosIdx:
         return pos[0] * self.full_height + pos[1]
@@ -366,9 +275,9 @@ class Board:
         self.hash = 0
 
     def set_state_from_game(self, snake1: Snake, snake2: Snake, candies: List[np.array]) -> None:
-        player1_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake1.positions)]
-        player2_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in reversed(snake2.positions)]
-        candy_positions = [self.from_pos(pos) + self.DIR_UP_RIGHT for pos in candies]
+        player1_positions = [self.from_pos(pos) + self.GAME_POS_OFFSET for pos in reversed(snake1.positions)]
+        player2_positions = [self.from_pos(pos) + self.GAME_POS_OFFSET for pos in reversed(snake2.positions)]
+        candy_positions = [self.from_pos(pos) + self.GAME_POS_OFFSET for pos in candies]
 
         self.set_state(player1_positions, player2_positions, candy_positions)
 
@@ -562,74 +471,6 @@ class Board:
 
         self.last_player = -self.last_player
 
-    def count_free_space_bfs(self, mask: GridMask, pos: PosIdx, max_dist: int, lb: int, prev_pos: PosIdx = 0) -> int:
-        mask[pos] = False
-        free_space = 1
-        cur_dist = 0
-        pos_options = self.FOUR_WAY_POSITIONS_FROM_POS_COND
-        queue = deque(maxlen=128)
-
-        while free_space < lb and cur_dist < max_dist:
-            for new_pos in pos_options[prev_pos][pos]:
-                if mask[new_pos]:
-                    mask[new_pos] = False
-                    free_space += 1
-                    queue.append((new_pos, pos, cur_dist + 1))
-            if not queue:
-                break
-            pos, prev_pos, cur_dist = queue.popleft()
-
-        return free_space
-
-    def count_free_space_bfs_delta(
-            self,
-            mask: GridMask,
-            pos1: PosIdx,
-            pos2: PosIdx,
-            min_dist: int = 1000,
-            max_dist: int = 1000,
-            delta_lb: int = 1000
-    ) -> Tuple[int, int, int]:
-        mask[pos1] = False
-        mask[pos2] = False
-        pos = pos1
-        player = 0
-        free_space = [1, 1]
-        delta_space = 0
-        cur_dist = 0
-        pos_options = self.FOUR_WAY_POSITIONS_COND
-        queue = deque(maxlen=256)
-        queue.append((1, pos2, 0))
-
-        while cur_dist < min_dist or (abs(delta_space) < delta_lb and cur_dist < max_dist):
-            for new_pos in pos_options[pos]:
-                if mask[new_pos]:
-                    mask[new_pos] = False
-                    free_space[player] += 1
-                    queue.append((player, new_pos, cur_dist + 1))
-            assert len(queue) < 200
-            if not queue:
-                break
-            player, pos, cur_dist = queue.popleft()
-            delta_space = free_space[0] - free_space[1]
-
-        return delta_space, free_space[0], free_space[1]
-
-    def count_free_space_dfs(self, mask: GridMask, pos: PosIdx, lb: int, max_dist: int, distance_map: Tuple[int]):
-        stack = [pos]
-        free_space = 0
-        pos_options = self.FOUR_WAY_POSITIONS_COND
-
-        while stack and free_space < lb:
-            pos = stack.pop()
-            if not mask[pos] or distance_map[pos] > max_dist:
-                continue
-            mask[pos] = False
-            free_space += 1
-            stack.extend(pos_options[pos])
-
-        return free_space
-
     def grid_as_np(self, grid: Grid) -> ndarray:
         a = np.array(grid)
         a.shape = (self.full_width, len(grid) // self.full_width)
@@ -663,16 +504,16 @@ class Board:
 
     def as_game(self, bot1: Type, bot2: Type) -> Game:
         p1_positions = [
-            list(self.from_index(p - self.DIR_UP_RIGHT))
+            list(self.from_index(p - self.GAME_POS_OFFSET))
             for p in reversed(self.get_player_positions(player=1))
         ]
         p2_positions = [
-            list(self.from_index(p - self.DIR_UP_RIGHT))
+            list(self.from_index(p - self.GAME_POS_OFFSET))
             for p in reversed(self.get_player_positions(player=-1))
         ]
         snake1 = Snake(id=0, positions=np.array(p1_positions))
         snake2 = Snake(id=1, positions=np.array(p2_positions))
-        candies = [np.array(self.from_index(p - self.DIR_UP_RIGHT)) for p in self.candies]
+        candies = [np.array(self.from_index(p - self.GAME_POS_OFFSET)) for p in self.candies]
         return Game(grid_size=self.shape, agents={0: bot1, 1: bot2}, snakes=[snake1, snake2], candies=candies)
 
     def __eq__(self, other) -> bool:
@@ -795,3 +636,180 @@ def create_grid(width, height) -> GridMask:
     first_row = [False] * (height + 2)
     mat = [first_row] + [[False] + [True] * height + [False] for _ in range(width)] + [first_row]
     return list(chain.from_iterable(mat))
+
+
+def pos_to_xy(pos: PosIdx, w: int, h: int) -> Tuple[int, int]:
+    assert w >= 3
+    assert h >= 3
+    return divmod(pos, h)
+
+
+def is_pos_valid(pos: PosIdx, w: int, h: int) -> bool:
+    x, y = pos_to_xy(pos, w, h)
+    return 0 <= x < w and 0 <= y < h
+
+
+def is_pos_within_bounds(pos: PosIdx, w: int, h: int) -> bool:
+    x, y = pos_to_xy(pos, w, h)
+    return 0 < x < w - 1 and 0 < y < h - 1
+
+
+@lru_cache(maxsize=None)
+def generate_l1_distance_lookup(w: int, h: int):
+    def manhattan_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+        return int(abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1]))
+
+    return [
+        [
+            manhattan_distance(pos_to_xy(p1, w, h), pos_to_xy(p2, w, h))
+            for p2 in range(w * h)
+        ]
+        for p1 in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_chebyshev_distance_lookup(w: int, h: int) -> List[List[int]]:
+    def chebyshev_distance(pos1: Tuple[int, int], pos2: Tuple[int, int]) -> int:
+        return max(abs(pos1[0] - pos2[0]), abs(pos1[1] - pos2[1]))
+
+    return [
+        [
+            chebyshev_distance(pos_to_xy(p1, w, h), pos_to_xy(p2, w, h))
+            for p2 in range(w * h)
+        ]
+        for p1 in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_edge_distance_lookup(w: int, h: int) -> List[PosIdx]:
+    def distance_to_edge(p: PosIdx) -> int:
+        x, y = pos_to_xy(p, w, h)
+        return max(0, min((x - 1, w - 2 - x, y - 1, h - 2 - y)))
+
+    return [
+        distance_to_edge(p)
+        for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_center_distance_lookup(w: int, h: int) -> List[PosIdx]:
+    def distance_to_center(p: PosIdx) -> int:
+        x, y = pos_to_xy(p, w, h)
+        cx = (w + 1) / 2
+        cy = (h + 1) / 2
+        return int(abs(x - cx)) + int(abs(y - cy))
+
+    return [
+        distance_to_center(p)
+        for p in range(w * h)
+    ]
+
+
+def generate_direction_offsets_map(w: int, h: int) -> Dict[Direction, int]:
+    assert w >= 3 and h >= 3
+    return {
+        Direction.UP_LEFT: -h + 1,
+        Direction.UP: 1,
+        Direction.UP_RIGHT: h + 1,
+        Direction.RIGHT: h,
+        Direction.DOWN_RIGHT: h - 1,
+        Direction.DOWN: -1,
+        Direction.DOWN_LEFT: -h - 1,
+        Direction.LEFT: -h
+    }
+
+
+@lru_cache(maxsize=None)
+def generate_move_offsets_map(w: int, h: int) -> Dict[BoardMove, int]:
+    dir_map = generate_direction_offsets_map(w, h)
+    return {
+        BoardMove.UP: dir_map[Direction.UP],
+        BoardMove.RIGHT: dir_map[Direction.RIGHT],
+        BoardMove.DOWN: dir_map[Direction.DOWN],
+        BoardMove.LEFT: dir_map[Direction.LEFT]
+    }
+
+
+@lru_cache(maxsize=None)
+def generate_4way_positions(w: int, h: int) -> List[Tuple[PosIdx, ...]]:
+    move_offsets_map = generate_move_offsets_map(w, h)
+    pos_offsets = tuple(move_offsets_map[m] for m in MOVES)
+    return [
+        tuple(p + d for d in pos_offsets)
+        for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_8way_positions(w: int, h: int) -> List[Tuple[PosIdx, ...]]:
+    dir_offsets_map = generate_direction_offsets_map(w, h)
+    pos_offsets = tuple(dir_offsets_map[d] for d in DIRECTIONS)
+    return [
+        tuple(p + d for d in pos_offsets)
+        for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_4way_bounded_positions(w: int, h: int) -> List[Tuple[PosIdx, ...]]:
+    move_offsets_map = generate_move_offsets_map(w, h)
+    pos_offsets = tuple(move_offsets_map[m] for m in MOVES)
+
+    def is_within_bounds(pos):
+        return is_pos_within_bounds(pos, w, h)
+
+    return [
+        tuple(filter(is_within_bounds, [p + d for d in pos_offsets]))
+        for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_8way_bounded_positions(w: int, h: int) -> List[Tuple[PosIdx, ...]]:
+    dir_offsets_map = generate_direction_offsets_map(w, h)
+    pos_offsets = tuple(dir_offsets_map[d] for d in DIRECTIONS)
+
+    def is_within_bounds(pos):
+        return is_pos_within_bounds(pos, w, h)
+
+    return [
+        tuple(filter(is_within_bounds, [p + d for d in pos_offsets]))
+        for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_territory_lookup(w: int, h: int) -> Tuple[List[List[int]], List[List[int]], List[List[int]]]:
+    from .search.space import count_free_space_bfs_delta
+    w0 = w - 2
+    h0 = h - 2
+    pos_options = generate_4way_bounded_positions(w, h)
+
+    def create_empty_mask():
+        return create_grid(w - 2, h - 2)
+
+    def compute_p1_territory(p1: PosIdx, p2: PosIdx) -> int:
+        if p1 == p2 or not is_pos_within_bounds(p1, w, h) or not is_pos_within_bounds(p2, w, h):
+            return 0
+
+        mask = create_empty_mask()
+        _, fs, _ = count_free_space_bfs_delta(mask, pos1=p1, pos2=p2, pos_options=pos_options)
+        return fs
+
+    territory1 = [
+        [compute_p1_territory(p1, p2) for p2 in range(w * h)]
+        for p1 in range(w * h)
+    ]
+    territory2 = [
+        [w0 * h0 - territory1[p1][p2] for p2 in range(w * h)]
+        for p1 in range(w * h)
+    ]
+    delta_territory = [
+        [territory1[p1][p2] - territory2[p1][p2] for p2 in range(w * h)]
+        for p1 in range(w * h)
+    ]
+
+    return territory1, territory2, delta_territory

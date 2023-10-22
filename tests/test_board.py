@@ -7,6 +7,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 from snakes.bots import Snek
+from snakes.bots.niekdt.search.space import count_free_space_bfs_delta, count_free_space_bfs, count_free_space_dfs
 from snakes.constants import Move
 from ..board import Board, count_move_partitions, BoardMove, from_repr, MOVE_MAP
 from ....snake import Snake
@@ -113,7 +114,6 @@ def test_move_from_trans(width, height):
 def test_four_way_positions(width, height):
     b = Board(width, height)
 
-    assert isinstance(b.FOUR_WAY_POS_OFFSETS, tuple)
     assert isinstance(b.FOUR_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
@@ -158,7 +158,6 @@ def test_four_way_trans_positions(width, height):
 def test_eight_way_positions(width, height):
     b = Board(width, height)
 
-    assert isinstance(b.EIGHT_WAY_POS_OFFSETS, tuple)
     assert isinstance(b.EIGHT_WAY_POSITIONS_COND, list)
 
     def is_within_bounds(pos):
@@ -168,7 +167,7 @@ def test_eight_way_positions(width, height):
             xx, yy = b.from_index(pos)
             return 0 < xx <= width and 0 < yy <= height
 
-    for x, y in itertools.product(range(1, b.full_width), range(1, b.full_height)):
+    for x, y in itertools.product(range(1, b.full_width - 1), range(1, b.full_height - 1)):
         ref_positions = list(filter(is_within_bounds, (
             b.from_xy(x + xo, y + yo)
             for xo, yo in itertools.product([-1, 0, 1], repeat=2)
@@ -646,29 +645,29 @@ def test_count_free_space_dfs(size, lb):
     b = Board(size, size)
 
     # test without lb
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+    space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
     assert space == size ** 2
 
     # test with lb
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+    space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
     assert space >= min(lb, size ** 2)
 
     # insert wall
     b.grid_mask[b.from_xy(2, 1)] = False
     b.grid_mask[b.from_xy(2, 2)] = False
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+    space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
     assert space == size ** 2 - 2
 
-    space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+    space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
     assert space >= min(lb, size ** 2 - 2)
 
     if size >= 3:
         # insert void
         for y in range(b.full_height):
             b.grid_mask[b.from_xy(2, y)] = False
-        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+        space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=1000, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
         assert space == size
-        space = b.count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)])
+        space = count_free_space_dfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), lb=lb, max_dist=100, distance_map=b.DISTANCE[b.from_xy(1, 1)], pos_options=b.FOUR_WAY_POSITIONS_COND)
         assert space >= min(lb, size)
 
 
@@ -678,20 +677,44 @@ def test_count_free_space_bfs(size, lb):
     b = Board(size, size)
 
     # test without restrictions
-    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=1000)
+    space = count_free_space_bfs(
+        mask=b.get_empty_mask(),
+        pos=b.from_xy(1, 1),
+        max_dist=1000,
+        lb=1000,
+        pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+    )
     assert space == size ** 2
 
     # test with lb
-    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=lb)
+    space = count_free_space_bfs(
+        mask=b.get_empty_mask(),
+        pos=b.from_xy(1, 1),
+        max_dist=1000,
+        lb=lb,
+        pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+    )
     assert min(lb, size ** 2) <= space <= size ** 2
 
     if size >= 3:
         # insert void
         for y in range(b.full_height):
             b.grid_mask[b.from_xy(2, y)] = False
-        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=1000)
+        space = count_free_space_bfs(
+            mask=b.get_empty_mask(),
+            pos=b.from_xy(1, 1),
+            max_dist=1000,
+            lb=1000,
+            pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+        )
         assert space == size
-        space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_xy(1, 1), max_dist=1000, lb=lb)
+        space = count_free_space_bfs(
+            mask=b.get_empty_mask(),
+            pos=b.from_xy(1, 1),
+            max_dist=1000,
+            lb=lb,
+            pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+        )
         assert space >= min(lb, size)
 
 
@@ -705,11 +728,23 @@ def test_count_free_space_bfs_dist(size, max_dist, lb):
         return 2 * (d + 1) ** 2 - 2 * (d + 1) + 1
 
     center = (int(size / 2) + 1, int(size / 2) + 1)
-    space = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_pos(center), max_dist=max_dist, lb=1000)
+    space = count_free_space_bfs(
+        mask=b.get_empty_mask(),
+        pos=b.from_pos(center),
+        max_dist=max_dist,
+        lb=1000,
+        pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+    )
     assert space == min(size ** 2, max_area(max_dist))
 
     # test with lb
-    space2 = b.count_free_space_bfs(mask=b.get_empty_mask(), pos=b.from_pos(center), max_dist=max_dist, lb=lb)
+    space2 = count_free_space_bfs(
+        mask=b.get_empty_mask(),
+        pos=b.from_pos(center),
+        max_dist=max_dist,
+        lb=lb,
+        pos_pos_options=b.FOUR_WAY_POSITIONS_FROM_POS_COND
+    )
     assert min(lb, min(size ** 2, max_area(max_dist))) <= space2 <= min(size ** 2, max_area(max_dist))
 
 
@@ -720,12 +755,13 @@ def test_count_free_space_bfs_delta_empty(size):
     def area2(s): return (s ** 2 - s) // 2
     def area1(s): return area2(s + 1)
 
-    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+    delta_space, free_space1, free_space2 = count_free_space_bfs_delta(
         mask=b.get_empty_mask(),
         pos1=b.from_xy(1, 1),
         pos2=b.from_xy(size, size),
         max_dist=1000,
-        delta_lb=1000
+        delta_lb=1000,
+        pos_options=b.FOUR_WAY_POSITIONS_COND
     )
 
     assert free_space1 == area1(size)
@@ -739,15 +775,16 @@ def test_count_free_space_bfs_delta_isolated(size):
     for y in range(b.full_height):
         b.grid_mask[b.from_xy(2, y)] = False
 
-    def area2(s): return size * (size - 2)
-    def area1(s): return size
+    def area2(s): return s * (s - 2)
+    def area1(s): return s
 
-    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+    delta_space, free_space1, free_space2 = count_free_space_bfs_delta(
         mask=b.get_empty_mask(),
         pos1=b.from_xy(1, 1),
         pos2=b.from_xy(size, size),
         max_dist=1000,
-        delta_lb=1000
+        delta_lb=1000,
+        pos_options=b.FOUR_WAY_POSITIONS_COND
     )
 
     assert free_space1 == area1(size)
@@ -762,12 +799,13 @@ def test_count_free_space_bfs_delta_walled(size, fs1):
 
     fs2 = size ** 2 - fs1 - 1
 
-    delta_space, free_space1, free_space2 = b.count_free_space_bfs_delta(
+    delta_space, free_space1, free_space2 = count_free_space_bfs_delta(
         mask=b.get_empty_mask(),
         pos1=b.from_xy(1, 1),
         pos2=b.from_xy(size, size),
         max_dist=1000,
-        delta_lb=1000
+        delta_lb=1000,
+        pos_options=b.FOUR_WAY_POSITIONS_COND
     )
 
     assert delta_space == fs1 - fs2
@@ -855,7 +893,8 @@ def test_territory1(width, height):
             p2 = b.from_xy(x2, y2)
             if p1 == p2:
                 continue
-            _, ref_space, _ = b.count_free_space_bfs_delta(b.get_empty_mask(), pos1=p1, pos2=p2)
+            _, ref_space, _ = count_free_space_bfs_delta(
+                b.get_empty_mask(), pos1=p1, pos2=p2, pos_options=b.FOUR_WAY_POSITIONS_COND)
             assert ref_space >= 2
             assert ref_space <= width * height - 1
             assert b.TERRITORY1[p1][p2] == ref_space

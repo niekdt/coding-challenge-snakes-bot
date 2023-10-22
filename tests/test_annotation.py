@@ -60,7 +60,7 @@ def test_annotations_valid(folder):
     files = list(pathlib.Path(folder).glob('*.png'))
     for file in files:
         aboard = annotation.from_png(str(file))
-        assert aboard.board.shape == (16, 16), f'problem with board image {file}'
+        assert aboard.board.shape == (18, 18), f'problem with board image {file}'
 
 
 def test_rotated():

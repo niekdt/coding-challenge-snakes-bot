@@ -23,7 +23,7 @@ class NegamaxAbBot(Bot):
         assert depth >= 1
         self.depth: int = depth
         self.eval_fun: callable = eval_fun
-        self.board = Board(width=self.grid_size[0], height=self.grid_size[1])
+        self.board = Board(self.grid_size[0], self.grid_size[1])
         self.move_history = dict()
 
     @property

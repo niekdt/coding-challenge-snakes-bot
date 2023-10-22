@@ -2,6 +2,7 @@ from functools import lru_cache
 from math import log
 
 from ..board import Board
+from ..search.space import count_free_space_bfs_delta
 
 
 @lru_cache(maxsize=None)
@@ -21,9 +22,19 @@ def evaluate(board: Board, player: int) -> float:
         return player * score
 
     if player == 1:
-        delta_space, fs0, fs1 = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p1_pos, pos2=p2_pos)
+        delta_space, fs0, fs1 = count_free_space_bfs_delta(
+            board.get_empty_mask(),
+            pos1=p1_pos,
+            pos2=p2_pos,
+            pos_options=board.FOUR_WAY_POSITIONS_COND
+        )
     else:
-        delta_space, fs1, fs0 = board.count_free_space_bfs_delta(board.get_empty_mask(), pos1=p2_pos, pos2=p1_pos)
+        delta_space, fs1, fs0 = count_free_space_bfs_delta(
+            board.get_empty_mask(),
+            pos1=p2_pos,
+            pos2=p1_pos,
+            pos_options=board.FOUR_WAY_POSITIONS_COND
+        )
         delta_space *= -1
 
     score += int(10000 * log(fs0 / fs1))

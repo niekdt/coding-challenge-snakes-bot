@@ -102,7 +102,7 @@ class AnnotatedBoard:
 
     def as_image(self):
         from PIL import Image
-        color_grid = np.full((self.board.width + 2, self.board.height + 2, 3), fill_value=0, dtype=np.uint8)
+        color_grid = np.full((self.board.width, self.board.height, 3), fill_value=0, dtype=np.uint8)
         r, g, b = 0, 1, 2
 
         for i, pos in enumerate(reversed(self.board.get_player_positions(player=1))):

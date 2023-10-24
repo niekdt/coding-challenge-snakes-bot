@@ -17,8 +17,13 @@ def negamax_moves(
     moves = board.get_valid_moves_ordered(player=1)
     move_values = dict()
     for move in moves:
+        if __debug__:
+            print(f'== Evaluate {move} ==')
         board.perform_move(move, player=1)
-        move_values[move] = -negamax(board, depth=depth - 1, player=-1, eval_fun=eval_fun)
+        value = -negamax(board, depth=depth - 1, player=-1, eval_fun=eval_fun)
+        if __debug__:
+            print(f'\tGot value {value}')
+        move_values[move] = value
         board.undo_move(player=1)
 
     return move_values

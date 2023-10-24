@@ -140,19 +140,7 @@ class Board:
 
         self.GAME_POS_OFFSET = generate_direction_offsets_map(self.width, self.height)[Direction.UP_RIGHT]
 
-        def _move_from_trans(pos_from, pos_to):
-            if abs(pos_to - pos_from) == 1:
-                return BoardMove.UP if pos_to > pos_from else BoardMove.DOWN
-            else:
-                return BoardMove.RIGHT if pos_to > pos_from else BoardMove.LEFT
-
-        self.MOVE_FROM_TRANS: List[List[BoardMove]] = [
-            [
-                _move_from_trans(p_from, p_to)
-                for p_to in range(len(self.grid_mask))
-            ]
-            for p_from in range(len(self.grid_mask))
-        ]
+        self.MOVE_FROM_TRANS = generate_move_from_to_position_lookup(self.width, self.height)
 
         def is_within_bounds(pos):
             if pos < 0 or pos >= len(self.grid_mask):
@@ -176,55 +164,16 @@ class Board:
             else:
                 return candidate_positions
 
-        self.FOUR_WAY_POSITIONS_FROM_POS_COND: List[List[Tuple[PosIdx, ...]]] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS_COND)
-                for pos_new in range(len(self.grid_mask))
-            ]
-            for pos_old in range(len(self.grid_mask))
-        ]
-
-        self.FOUR_WAY_POSITIONS_FROM_POS: List[List] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.FOUR_WAY_POSITIONS)
-                for pos_new in range(len(self.grid_mask))
-            ]
-            for pos_old in range(len(self.grid_mask))
-        ]
+        self.FOUR_WAY_POSITIONS_FROM_POS_COND = generate_4way_positions_from_to_lookup(self.width, self.height)
 
         self.EIGHT_WAY_POSITIONS = generate_8way_positions(self.width, self.height)
         self.EIGHT_WAY_POSITIONS_COND = generate_8way_bounded_positions(self.width, self.height)
 
-        self.EIGHT_WAY_POSITIONS_FROM_POS_COND: List[List] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS_COND)
-                for pos_new in range(len(self.grid_mask))
-            ]
-            for pos_old in range(len(self.grid_mask))
-        ]
+        self.EIGHT_WAY_POSITIONS_FROM_POS_COND = generate_8way_positions_from_to_lookup(self.width, self.height)
 
-        self.EIGHT_WAY_POSITIONS_FROM_POS: List[List] = [
-            [
-                _get_transitional_positions(pos_old, pos_new, self.EIGHT_WAY_POSITIONS)
-                for pos_new in range(len(self.grid_mask))
-            ]
-            for pos_old in range(len(self.grid_mask))
-        ]
+        self.MOVES_FROM_POS_TRANS = generate_moves_from_to_position_lookup(self.width, self.height)
 
-        # Get moves for a given (from, to) position pair, with the first returned move being the last performed move
-        self.MOVES_FROM_POS_TRANS: List[List[Tuple[BoardMove, ...], ...]] = [
-            [
-                tuple(
-                    m for m in FIRST_MOVE_ORDER[self.MOVE_FROM_TRANS[pos_old][pos_new]]
-                    if is_within_bounds(pos_new + self.MOVE_POS_OFFSET[m])
-                )
-                for pos_new in range(len(self.grid_mask))
-            ]
-            for pos_old in range(len(self.grid_mask))
-        ]
-
-        self.TERRITORY1, self.TERRITORY2, self.DELTA_TERRITORY = \
-            generate_territory_lookup(self.width, self.height)
+        self.TERRITORY1, self.TERRITORY2, self.DELTA_TERRITORY = generate_territory_lookup(self.width, self.height)
 
     def from_pos(self, pos: Pos) -> PosIdx:
         return pos[0] * self.height + pos[1]
@@ -402,6 +351,19 @@ class Board:
             (self.grid_mask[p] for p in self.FOUR_WAY_POSITIONS[pos])
         ))  # faster than tuple() AND list comprehension
         return [x for _, x in sorted(zip(order, moves))]
+
+    def order_moves(self, moves: List[BoardMove], player: int) -> List[BoardMove]:
+        assert len(moves) > 0
+
+        def eval_move(move):
+            if player == 1:
+                new_pos = self.player1_pos + self.MOVE_POS_OFFSET[move]
+                return self.DELTA_TERRITORY[new_pos][self.player2_pos]
+            else:
+                new_pos = self.player2_pos + self.MOVE_POS_OFFSET[move]
+                return self.DELTA_TERRITORY[new_pos][self.player1_pos]
+
+        return list(sorted(moves, key=eval_move, reverse=True))
 
     def perform_move(self, move: BoardMove, player: int) -> None:
         assert self.last_player != player
@@ -793,6 +755,75 @@ def generate_8way_bounded_positions(w: int, h: int) -> List[Tuple[PosIdx, ...]]:
     return [
         tuple(filter(is_within_bounds, [p + d for d in pos_offsets]))
         for p in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_move_from_to_position_lookup(w: int, h: int) -> List[List[BoardMove]]:
+    def _move_from_trans(pos_from, pos_to):
+        if abs(pos_to - pos_from) == 1:
+            return BoardMove.UP if pos_to > pos_from else BoardMove.DOWN
+        else:
+            return BoardMove.RIGHT if pos_to > pos_from else BoardMove.LEFT
+
+    return [
+        [
+            _move_from_trans(p_from, p_to)
+            for p_to in range(w * h)
+        ]
+        for p_from in range(w * h)
+    ]
+
+
+def _get_transitional_positions(pos_old: PosIdx, pos_new: PosIdx, pos_options: List) -> Tuple[PosIdx, ...]:
+    candidate_positions = pos_options[pos_new]
+    if pos_old in candidate_positions:
+        return tuple(p for p in candidate_positions if p != pos_old)
+    else:
+        return candidate_positions
+
+
+@lru_cache(maxsize=None)
+def generate_4way_positions_from_to_lookup(w: int, h: int) -> List[List[Tuple[PosIdx, ...]]]:
+    pos_options = generate_4way_bounded_positions(w, h)
+
+    return [
+        [
+            _get_transitional_positions(pos_old, pos_new, pos_options)
+            for pos_new in range(w * h)
+        ]
+        for pos_old in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_8way_positions_from_to_lookup(w: int, h: int) -> List[List[Tuple[PosIdx, ...]]]:
+    pos_options = generate_8way_bounded_positions(w, h)
+
+    return [
+        [
+            _get_transitional_positions(pos_old, pos_new, pos_options)
+            for pos_new in range(w * h)
+        ]
+        for pos_old in range(w * h)
+    ]
+
+
+@lru_cache(maxsize=None)
+def generate_moves_from_to_position_lookup(w: int, h: int) -> List[List[Tuple[BoardMove, ...]]]:
+    """Get moves for a given (from, to) position pair, with the first returned move being the last performed move"""
+    move_from_to_pos = generate_move_from_to_position_lookup(w, h)
+    move_pos_offset = generate_move_offsets_map(w, h)
+
+    return [
+        [
+            tuple(
+                m for m in FIRST_MOVE_ORDER[move_from_to_pos[pos_old][pos_new]]
+                if is_pos_within_bounds(pos_new + move_pos_offset[m], w, h)
+            )
+            for pos_new in range(w * h)
+        ]
+        for pos_old in range(w * h)
     ]
 
 

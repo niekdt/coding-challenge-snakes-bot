@@ -3,6 +3,7 @@ import gc
 import numpy as np
 import pytest
 
+from snakes.bots.niekdt.eval import best
 from snakes.bots.niekdt.eval.annotation import AnnotatedBoard
 from snakes.bots.niekdt.search.pvs import pvs_moves
 from ..board import Board, BoardMove
@@ -68,7 +69,7 @@ def test_goto_candy(depth, search, size):
     assert best_move(moves) == BoardMove.RIGHT
 
 
-@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 16), (pvs_moves, 13)])
+@pytest.mark.parametrize('search,depth', [(negamax_moves, 10), (negamax_ab_moves, 10), (pvs_moves, 10)])
 @pytest.mark.timeout(5)
 def test_computation_time(search, depth):
     board = Board(16, 16)
@@ -79,4 +80,4 @@ def test_computation_time(search, depth):
     )
     print(board)
 
-    search(board, depth=depth, eval_fun=candy_dist.evaluate, move_history=dict())
+    search(board, depth=depth, eval_fun=best.evaluate, move_history=dict())

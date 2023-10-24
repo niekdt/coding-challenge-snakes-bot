@@ -15,7 +15,6 @@ def count_free_space_bfs(
     mask[pos] = False
     free_space = 1
     cur_dist = 0
-    # pos_options = self.FOUR_WAY_POSITIONS_FROM_POS_COND
     queue = deque(maxlen=128)
 
     while free_space < lb and cur_dist < max_dist:

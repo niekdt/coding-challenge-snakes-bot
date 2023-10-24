@@ -1,38 +1,42 @@
 import gc
+import glob
+import itertools
 import random
+from typing import List
 
-import numpy as np
 import pytest
 
-from snakes.bots import Slifer, Snek
-from snakes.bots.niekdt.eval import best
-from snakes.game import Game
-from snakes.snake import Snake
+from snakes.bots.niekdt.board import Board
+from snakes.bots.niekdt.eval import best, annotation
+from snakes.bots.niekdt.search.pvs import pvs_moves
+
+
+def find_positions(path) -> List[str]:
+    return glob.glob(f'{path}/*.png', recursive=True)
 
 
 @pytest.fixture(autouse=True)
 def cleanup():
     # warm-up
-    test_play_deep_game(grid=16, seed=1, max_turns=400)
     best.evaluate.cache_clear()
     gc.collect()
     gc.disable()
 
 
-@pytest.mark.parametrize('grid', [16])
-@pytest.mark.parametrize('seed', [1] * 6)
-@pytest.mark.parametrize('max_turns', [500])  # time to beat: 12.9s
-def test_play_deep_game(grid, seed, max_turns):
-    random.seed(seed)
-    grid_size = (grid, grid)
-    snake1 = Snake(id=0, positions=np.array([[0, 0], [0, 1]]))
-    snake2 = Snake(id=1, positions=np.array([[2, 2], [2, 1]]))
-    game = Game(grid_size=grid_size, agents={0: Snek, 1: Slifer}, snakes=[snake1, snake2])
+@pytest.fixture(scope='session')
+def boards(request) -> List[Board]:
+    paths = find_positions(request.param)
 
-    while not game.finished() and game.turns < max_turns:
-        game.update()
+    def load_board(file) -> List[Board]:
+        aboard = annotation.from_png(file)
+        return [b.board for b in aboard.orientations()]
 
-    assert game.finished()
-    assert game.scores[0] > game.scores[1]
-    assert game.scores[0] == 64
-    assert game.scores[1] == 20
+    return list(itertools.chain.from_iterable([load_board(file) for file in paths]))
+
+
+@pytest.mark.parametrize('boards', ['forced-win', 'forced-loss'], indirect=True)
+def test_search(boards):
+    random.seed(1)
+    for board in boards:
+        best.evaluate.cache_clear()
+        pvs_moves(board.copy(), depth=1, eval_fun=best.evaluate, move_history=dict())

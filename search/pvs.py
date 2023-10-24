@@ -22,6 +22,9 @@ def pvs_moves(
 
     board_hash = hash(board)
     move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[player1_last_move])
+    # move_order = move_history.get(board_hash, None)
+    # if move_order is None:
+    #     move_order = board.order_moves(FIRST_MOVE_ORDER[player1_last_move], player=1)
     moves = list(board.iterate_valid_moves(player=1, order=move_order))
 
     alpha = -inf
@@ -35,7 +38,7 @@ def pvs_moves(
             if __debug__:
                 print('Skipping last root move evaluation because all other moves sucked')
             best_move = move
-            # best_value = 0
+            best_value = 0
             break
 
         if __debug__:
@@ -111,6 +114,9 @@ def pvs(
 
     board_hash = hash(board)
     move_order = move_history.get(board_hash, FIRST_MOVE_ORDER[my_move])
+    # move_order = move_history.get(board_hash, None)
+    # if move_order is None:
+    #     move_order = board.order_moves(FIRST_MOVE_ORDER[my_move], player=player)
     moves = board.iterate_valid_moves(player=player, order=move_order)
 
     move_scores = {

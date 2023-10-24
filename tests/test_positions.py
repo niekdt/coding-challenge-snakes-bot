@@ -16,8 +16,8 @@ def find_positions(path) -> List[str]:
     return glob.glob(f'{path}/*.png', recursive=True)
 
 
-@pytest.mark.parametrize('file', ['best-choice\\gap-17.png', 'best-choice\\gap-21.png', 'best-choice\\fill-gap.png'])
-# @pytest.mark.parametrize('file', find_all_positions())
+# @pytest.mark.parametrize('file', ['best-choice\\gap-17.png', 'best-choice\\gap-21.png', 'best-choice\\fill-gap.png'])
+@pytest.mark.parametrize('file', find_all_positions())
 @pytest.mark.parametrize('eval_fun', [best.evaluate])
 def test_eval(file, eval_fun):
     aboard = annotation.from_png(file)

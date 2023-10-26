@@ -24,8 +24,11 @@ def cleanup():
 
 
 @pytest.fixture(scope='session')
-def boards(request) -> List[Board]:
-    paths = find_positions(request.param)
+def boards() -> List[Board]:
+    paths = find_positions('forced-win') + \
+            find_positions('forced-loss') + \
+            find_positions('best-choice') + \
+            find_positions('neutral')
 
     def load_board(file) -> List[Board]:
         aboard = annotation.from_png(file)
@@ -34,9 +37,12 @@ def boards(request) -> List[Board]:
     return list(itertools.chain.from_iterable([load_board(file) for file in paths]))
 
 
-@pytest.mark.parametrize('boards', ['forced-win', 'forced-loss'], indirect=True)
-def test_search(boards):
-    random.seed(1)
+# time to beat: 9.45s
+@pytest.mark.parametrize('seed', [1] * 6)
+@pytest.mark.parametrize('repeat', [10])
+def test_search(seed, repeat, boards):
+    random.seed(seed)
     for board in boards:
-        best.evaluate.cache_clear()
-        pvs_moves(board.copy(), depth=1, eval_fun=best.evaluate, move_history=dict())
+        for i in range(repeat):
+            best.evaluate.cache_clear()
+            pvs_moves(board.copy(), depth=1, eval_fun=best.evaluate, move_history=dict())

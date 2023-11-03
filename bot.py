@@ -12,7 +12,6 @@ from ...snake import Snake
 class Snek(Bot):
     def __init__(self, id: int, grid_size: Tuple[int, int]) -> None:
         super().__init__(id, grid_size)
-        best.evaluate.cache_clear()
         self.bot = NegamaxAbBot(id=id, grid_size=grid_size, depth=6, eval_fun=best.evaluate)
 
     @property

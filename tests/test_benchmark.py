@@ -18,7 +18,6 @@ def find_positions(path) -> List[str]:
 @pytest.fixture(autouse=True)
 def cleanup():
     # warm-up
-    best.evaluate.cache_clear()
     gc.collect()
     gc.disable()
 
@@ -44,5 +43,4 @@ def test_search(seed, repeat, boards):
     random.seed(seed)
     for board in boards:
         for i in range(repeat):
-            best.evaluate.cache_clear()
             pvs_moves(board.copy(), depth=1, eval_fun=best.evaluate, move_history=dict())

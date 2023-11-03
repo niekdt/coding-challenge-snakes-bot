@@ -1,11 +1,9 @@
-from functools import lru_cache
 from math import log
 
 from ..board import Board
 from ..search.space import count_free_space_bfs_delta
 
 
-@lru_cache(maxsize=None)
 def evaluate(board: Board, player: int) -> float:
     p1_pos = board.player1_pos
     p2_pos = board.player2_pos

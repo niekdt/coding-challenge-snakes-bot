@@ -1,7 +1,9 @@
 # Snek
 Snek is my bot submission for the multiplayer snakes tournament organized by [nobleans-playerground](https://github.com/nobleans-playground/coding-challenge-snakes).
 
-Snek uses [principal variation search](https://www.chessprogramming.org/Principal_Variation_Search) to search for move sequences that lead to favorable or undesirable game states, and prunes part of the game tree to save computation time. Snek does not have a heart, but it does have a custom [game board representation](board.py) optimized for tree-search algorithms.
+Snek uses [principal variation search](https://www.chessprogramming.org/Principal_Variation_Search) to search for move sequences that lead to favorable or undesirable game states, and prunes part of the game tree to save computation time. Snek does not have legs, but it does have a custom [game board representation](board.py) optimized for tree-search algorithms.
+
+With the 100 ms/turn average requirement, Snek can search 8-ply, including a max 32-ply deep [quiescence search](https://www.chessprogramming.org/Quiescence_Search).
 
 # Setup
 This repository is implemented to be a submodule of https://github.com/nobleans-playground/coding-challenge-snakes.
